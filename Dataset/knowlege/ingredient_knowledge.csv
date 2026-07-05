@@ -1,0 +1,10 @@
+name,aliases,category,purpose,health_score,risk_level,description,daily_limit,pregnancy,children,diabetes,kidney,heart,approved_fssai,approved_fda,approved_efsa
+Sugar,"Sucrose;Cane Sugar;Brown Sugar",Sweetener,Sweetness,40,Medium,"Added sugar contributes calories without essential nutrients.","25g/day","Limit","Limit","Avoid excess","Moderate","Moderate","Yes","Yes","Yes"
+
+High Fructose Corn Syrup,"HFCS;Corn Syrup;Glucose Syrup",Sweetener,Sweetness,20,High,"Highly processed sweetener linked to excessive sugar intake.","Avoid excess","Avoid","Avoid","Avoid","Moderate","Avoid","Yes","Yes","Yes"
+
+Monosodium Glutamate,"MSG;E621;INS621",Flavor Enhancer,Flavor,80,Low,"Flavor enhancer considered safe for most people within normal intake.","ADI Not Specified","Safe","Safe","Safe","Safe","Safe","Yes","Yes","Yes"
+
+Aspartame,"E951",Artificial Sweetener,Sweetness,60,Medium,"Artificial sweetener. People with PKU must avoid it.","ADI 40 mg/kg","Consult Doctor","Limit","Generally Safe","Safe","Safe","Yes","Yes","Yes"
+
+Palm Oil,"Palmolein",Oil,Frying,55,Medium,"High in saturated fat. Frequent consumption should be moderated.","Moderate","Safe","Moderate","Moderate","Moderate","Moderate","Yes","Yes","Yes"
