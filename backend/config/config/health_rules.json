@@ -1,0 +1,185 @@
+{
+  "version": "1.0.0",
+  "description": "PACKS Health Rules Configuration - all thresholds, weights and reference values used by the analysis engines. Values are per 100g/100ml of product unless stated otherwise.",
+
+  "nutrition_thresholds": {
+    "calories": {
+      "unit": "kcal",
+      "low": 40,
+      "moderate": 160,
+      "high": 300,
+      "very_high": 400
+    },
+    "sugar": {
+      "unit": "g",
+      "low": 5,
+      "moderate": 10,
+      "high": 22.5,
+      "very_high": 30,
+      "who_daily_limit_g": 25
+    },
+    "salt": {
+      "unit": "g",
+      "low": 0.3,
+      "moderate": 1.0,
+      "high": 1.5,
+      "very_high": 2.0,
+      "who_daily_limit_g": 5
+    },
+    "sodium": {
+      "unit": "mg",
+      "low": 120,
+      "moderate": 400,
+      "high": 600,
+      "very_high": 800,
+      "who_daily_limit_mg": 2000
+    },
+    "protein": {
+      "unit": "g",
+      "low": 3,
+      "moderate": 6,
+      "high": 12,
+      "excellent": 20
+    },
+    "fiber": {
+      "unit": "g",
+      "low": 1,
+      "moderate": 3,
+      "high": 6,
+      "excellent": 10
+    },
+    "total_fat": {
+      "unit": "g",
+      "low": 3,
+      "moderate": 10,
+      "high": 17.5,
+      "very_high": 25
+    },
+    "saturated_fat": {
+      "unit": "g",
+      "low": 1.5,
+      "moderate": 4,
+      "high": 5,
+      "very_high": 10,
+      "who_daily_limit_g": 20
+    },
+    "trans_fat": {
+      "unit": "g",
+      "low": 0.0,
+      "moderate": 0.2,
+      "high": 0.5,
+      "very_high": 1.0,
+      "who_daily_limit_g": 2.2
+    }
+  },
+
+  "health_score_weights": {
+    "calories": 10,
+    "sugar": 20,
+    "salt": 15,
+    "saturated_fat": 15,
+    "trans_fat": 15,
+    "protein": 15,
+    "fiber": 10,
+    "additives": 15,
+    "nova_group": 10
+  },
+
+  "health_score_bands": {
+    "excellent": { "min": 85, "max": 100, "label": "Excellent", "color": "#1B873F" },
+    "good": { "min": 65, "max": 84, "label": "Good", "color": "#66BB6A" },
+    "moderate": { "min": 45, "max": 64, "label": "Moderate", "color": "#FDD835" },
+    "poor": { "min": 25, "max": 44, "label": "Poor", "color": "#FB8C00" },
+    "bad": { "min": 0, "max": 24, "label": "Bad", "color": "#E53935" }
+  },
+
+  "artificial_sweeteners": {
+    "aspartame": { "e_number": "E951", "ins_number": "951", "daily_limit_mg_per_kg_bw": 40, "risk_level": "moderate" },
+    "sucralose": { "e_number": "E955", "ins_number": "955", "daily_limit_mg_per_kg_bw": 15, "risk_level": "low" },
+    "acesulfame_k": { "e_number": "E950", "ins_number": "950", "daily_limit_mg_per_kg_bw": 15, "risk_level": "moderate" },
+    "saccharin": { "e_number": "E954", "ins_number": "954", "daily_limit_mg_per_kg_bw": 5, "risk_level": "moderate" },
+    "cyclamate": { "e_number": "E952", "ins_number": "952", "daily_limit_mg_per_kg_bw": 7, "risk_level": "moderate" },
+    "neotame": { "e_number": "E961", "ins_number": "961", "daily_limit_mg_per_kg_bw": 2, "risk_level": "low" },
+    "stevia": { "e_number": "E960", "ins_number": "960", "daily_limit_mg_per_kg_bw": 4, "risk_level": "very_low" }
+  },
+
+  "artificial_colours": {
+    "tartrazine": { "e_number": "E102", "ins_number": "102", "risk_level": "high", "notes": "Linked to hyperactivity in children" },
+    "sunset_yellow": { "e_number": "E110", "ins_number": "110", "risk_level": "high", "notes": "Linked to hyperactivity in children" },
+    "carmoisine": { "e_number": "E122", "ins_number": "122", "risk_level": "high" },
+    "ponceau_4r": { "e_number": "E124", "ins_number": "124", "risk_level": "high" },
+    "allura_red": { "e_number": "E129", "ins_number": "129", "risk_level": "moderate" },
+    "brilliant_blue": { "e_number": "E133", "ins_number": "133", "risk_level": "low" },
+    "quinoline_yellow": { "e_number": "E104", "ins_number": "104", "risk_level": "high" }
+  },
+
+  "artificial_preservatives": {
+    "sodium_benzoate": { "e_number": "E211", "ins_number": "211", "risk_level": "moderate", "daily_limit_mg_per_kg_bw": 5 },
+    "potassium_sorbate": { "e_number": "E202", "ins_number": "202", "risk_level": "low", "daily_limit_mg_per_kg_bw": 25 },
+    "sodium_nitrite": { "e_number": "E250", "ins_number": "250", "risk_level": "high", "daily_limit_mg_per_kg_bw": 0.07 },
+    "sodium_nitrate": { "e_number": "E251", "ins_number": "251", "risk_level": "high", "daily_limit_mg_per_kg_bw": 3.7 },
+    "sulphur_dioxide": { "e_number": "E220", "ins_number": "220", "risk_level": "moderate", "daily_limit_mg_per_kg_bw": 0.7 },
+    "bha": { "e_number": "E320", "ins_number": "320", "risk_level": "high", "daily_limit_mg_per_kg_bw": 0.3 },
+    "bht": { "e_number": "E321", "ins_number": "321", "risk_level": "high", "daily_limit_mg_per_kg_bw": 0.3 }
+  },
+
+  "flavour_enhancers": {
+    "msg": { "e_number": "E621", "ins_number": "621", "risk_level": "moderate", "daily_limit_mg_per_kg_bw": 30 },
+    "disodium_guanylate": { "e_number": "E627", "ins_number": "627", "risk_level": "low" },
+    "disodium_inosinate": { "e_number": "E631", "ins_number": "631", "risk_level": "low" }
+  },
+
+  "high_risk_sweetener_syrups": {
+    "hfcs": { "aliases": ["high fructose corn syrup", "high-fructose corn syrup", "corn syrup"], "risk_level": "high" },
+    "invert_sugar_syrup": { "aliases": ["invert sugar", "invert syrup"], "risk_level": "moderate" }
+  },
+
+  "nova_classification": {
+    "nova_1": {
+      "label": "Unprocessed or minimally processed foods",
+      "max_ingredient_count": 1,
+      "description": "Single natural ingredient with no additives."
+    },
+    "nova_2": {
+      "label": "Processed culinary ingredients",
+      "max_ingredient_count": 2,
+      "description": "Oils, butter, sugar, salt extracted from nova_1 foods or nature."
+    },
+    "nova_3": {
+      "label": "Processed foods",
+      "max_additive_count": 2,
+      "description": "Nova_1/2 foods with added salt, sugar, oil, or a small number of preservatives."
+    },
+    "nova_4": {
+      "label": "Ultra-processed food and drink products",
+      "min_additive_count": 3,
+      "description": "Formulations with 5+ ingredients including additives not used in home cooking (colours, flavours, sweeteners, emulsifiers, etc.)."
+    }
+  },
+
+  "disease_thresholds": {
+    "diabetes": { "sugar_high_g": 15, "sugar_moderate_g": 8, "fiber_protective_g": 5, "artificial_sweetener_caution": true },
+    "hypertension": { "salt_high_g": 1.2, "salt_moderate_g": 0.6, "sodium_high_mg": 480, "sodium_moderate_mg": 240 },
+    "heart_disease": { "saturated_fat_high_g": 5, "trans_fat_high_g": 0.2, "sodium_high_mg": 480 },
+    "kidney_disease": { "sodium_high_mg": 400, "protein_high_g": 15, "potassium_caution": true, "phosphate_additive_caution": true },
+    "pregnancy": { "additive_caution": true, "caffeine_caution": true, "unpasteurized_caution": true, "artificial_sweetener_caution": true },
+    "children": { "sugar_high_g": 10, "artificial_colour_caution": true, "artificial_sweetener_caution": true, "caffeine_caution": true },
+    "weight_loss": { "calories_high_kcal": 250, "sugar_high_g": 10, "fat_high_g": 15, "fiber_protective_g": 5 },
+    "muscle_gain": { "protein_low_g": 8, "protein_excellent_g": 20, "sugar_caution_g": 20 },
+    "pcos": { "sugar_high_g": 10, "refined_carb_caution": true, "trans_fat_high_g": 0.2 },
+    "thyroid": { "soy_caution": true, "iodine_caution": true, "processed_food_caution": true }
+  },
+
+  "recommendation_settings": {
+    "max_alternatives_returned": 5,
+    "min_score_improvement": 10,
+    "same_category_match": true,
+    "gym_protein_target_g_per_meal": 20,
+    "daily_calorie_reference_kcal": 2000,
+    "daily_sugar_reference_g": 25,
+    "daily_salt_reference_g": 5,
+    "daily_saturated_fat_reference_g": 20,
+    "daily_protein_reference_g": 50,
+    "daily_fiber_reference_g": 30
+  }
+}
