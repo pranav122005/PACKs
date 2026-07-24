@@ -1,9 +1,0 @@
-Flask>=3.0.0
-google-genai
-faiss-cpu
-numpy
-pypdf
-python-dotenv
-opencv-python
-Pillow
-gunicorn
