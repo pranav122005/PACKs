@@ -79,3 +79,64 @@ def _deskew(gray: np.ndarray) -> np.ndarray:
         logger.warning("Deskew step failed, continuing with un-deskewed image: %s", exc)
         return gray
 
+
+def preprocess_for_ocr(image_path: str, save_debug_path: str | None = None) -> np.ndarray:
+    """
+    Loads and preprocesses a nutrition label image for OCR.
+
+    Pipeline:
+        1. Load as BGR, convert to grayscale
+        2. Upscale small images
+        3. Denoise (fast non-local means)
+        4. CLAHE adaptive contrast enhancement (handles glare / low contrast)
+        5. Deskew (corrects minor photo rotation)
+        6. Adaptive Gaussian thresholding -> clean black-on-white binary image
+
+    Args:
+        image_path: path to the source image file.
+        save_debug_path: optional path to write the processed image to disk,
+                          useful for debugging OCR quality issues.
+
+    Returns:
+        A single-channel (grayscale/binary) numpy array ready for EasyOCR.
+
+    Raises:
+        ImagePreprocessError: if the image can't be loaded or processed.
+    """
+    image = load_image(image_path)
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = _upscale_if_small(gray)
+
+    # Denoise before contrast enhancement so CLAHE doesn't amplify noise
+    denoised = cv2.fastNlMeansDenoising(gray, h=10, templateWindowSize=7, searchWindowSize=21)
+
+    # CLAHE: local adaptive contrast enhancement, good for glossy/glare-prone
+    # packaging and faint printed text
+    clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+    enhanced = clahe.apply(denoised)
+
+    deskewed = _deskew(enhanced)
+
+    # Adaptive thresholding handles uneven lighting across the label better
+    # than a single global threshold value would.
+    binary = cv2.adaptiveThreshold(
+        deskewed,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        blockSize=31,
+        C=15,
+    )
+
+    # Light morphological close to reconnect thin broken character strokes
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
+    processed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+
+    if save_debug_path:
+        try:
+            cv2.imwrite(save_debug_path, processed)
+        except Exception as exc:  # noqa: BLE001 - debug output is non-critical
+            logger.warning("Failed to write debug preprocessed image: %s", exc)
+
+    return processed
