@@ -163,3 +163,43 @@ def chunk_text(
     return results
 
 
+def chunk_segments(
+    segments: list[tuple[str, str | None]],
+    filename: str,
+    source_id: str,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    overlap: int = DEFAULT_OVERLAP,
+) -> list[dict]:
+    """
+    Chunks a whole document that has already been split into located segments
+    (e.g. [(page_1_text, "page 1"), (page_2_text, "page 2"), ...] for a PDF, or
+    [(row_1_text, "row 1"), ...] for a CSV). Keeps a single continuous
+    chunk_index across the entire document regardless of segment boundaries.
+
+    Args:
+        segments: list of (text, location) tuples in document order.
+        filename: display name of the source file.
+        source_id: stable identifier for the source document.
+        chunk_size: target max characters per chunk.
+        overlap: target max characters carried over between chunks.
+
+    Returns:
+        Flat list of chunk dicts (same shape as chunk_text()) across all segments.
+    """
+    all_chunks = []
+    running_index = 0
+
+    for segment_text, location in segments:
+        segment_chunks = chunk_text(
+            text=segment_text,
+            filename=filename,
+            source_id=source_id,
+            location=location,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            start_chunk_index=running_index,
+        )
+        all_chunks.extend(segment_chunks)
+        running_index += len(segment_chunks)
+
+    return all_chunks
