@@ -102,3 +102,47 @@ def _embed_batch_with_retry(texts: list[str], task_type: str) -> list[list[float
         f"Failed to embed batch of {len(texts)} after {MAX_RETRIES} retries: {last_exc}"
     ) from last_exc
 
+
+def embed_documents(texts: list[str], batch_size: int = DEFAULT_BATCH_SIZE) -> list[list[float]]:
+    """
+    Generates embeddings for a list of document chunks using
+    task_type="RETRIEVAL_DOCUMENT" (asymmetric embedding for the "document
+    side" of a retrieval pair). Texts are sent in true batched API calls
+    (multiple contents per request), not one call per text.
+
+    Args:
+        texts: list of chunk texts to embed. Empty/whitespace-only entries
+               are rejected up front.
+        batch_size: how many texts to send per API call.
+
+    Returns:
+        List of embedding vectors (list[float]), in the same order as `texts`.
+
+    Raises:
+        EmbeddingError: if input is invalid, or embedding fails after retries.
+    """
+    if not texts:
+        return []
+
+    for i, text in enumerate(texts):
+        if not isinstance(text, str) or not text.strip():
+            raise EmbeddingError(f"texts[{i}] is empty or not a string; cannot embed.")
+
+    embeddings: list[list[float]] = []
+    total = len(texts)
+
+    for batch_start in range(0, total, batch_size):
+        batch = texts[batch_start : batch_start + batch_size]
+        logger.info(
+            "Embedding batch %d-%d of %d chunks...",
+            batch_start,
+            min(batch_start + batch_size, total) - 1,
+            total,
+        )
+        embeddings.extend(_embed_batch_with_retry(batch, task_type="RETRIEVAL_DOCUMENT"))
+
+        if batch_start + batch_size < total:
+            time.sleep(INTER_BATCH_DELAY_SECONDS)
+
+    return embeddings
+
