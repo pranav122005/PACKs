@@ -146,3 +146,23 @@ def embed_documents(texts: list[str], batch_size: int = DEFAULT_BATCH_SIZE) -> l
 
     return embeddings
 
+
+def embed_query(text: str) -> list[float]:
+    """
+    Generates an embedding for a user query using task_type="RETRIEVAL_QUERY"
+    (asymmetric embedding for the "query side").
+
+    Args:
+        text: the user's question.
+
+    Returns:
+        A single embedding vector (list[float]).
+
+    Raises:
+        EmbeddingError: if input is invalid, or embedding fails after retries.
+    """
+    if not isinstance(text, str) or not text.strip():
+        raise EmbeddingError("Query text is empty; cannot embed.")
+
+    result = _embed_batch_with_retry([text.strip()], task_type="RETRIEVAL_QUERY")
+    return result[0]
