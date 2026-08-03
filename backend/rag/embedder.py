@@ -47,3 +47,58 @@ def _is_retryable(exc: Exception) -> bool:
         return getattr(exc, "code", None) == RATE_LIMIT_STATUS_CODE
     return False
 
+
+def _embed_batch_with_retry(texts: list[str], task_type: str) -> list[list[float]]:
+    """
+    Embeds a batch of texts in a single API call, retrying transient
+    failures (5xx, 429) with exponential backoff + jitter.
+
+    Raises:
+        EmbeddingError: if all retries are exhausted, or a non-retryable error occurs.
+    """
+    client = _get_client()
+    backoff = INITIAL_BACKOFF_SECONDS
+    last_exc: Exception | None = None
+
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            response = client.models.embed_content(
+                model=_config.GEMINI_EMBEDDING_MODEL,
+                contents=texts,
+                config=types.EmbedContentConfig(task_type=task_type),
+            )
+            if not response.embeddings or len(response.embeddings) != len(texts):
+                raise EmbeddingError(
+                    f"Gemini API returned {len(response.embeddings or [])} embeddings "
+                    f"for {len(texts)} inputs — mismatch."
+                )
+            return [item.values for item in response.embeddings]
+
+        except (genai_errors.ServerError, genai_errors.ClientError) as exc:
+            if not _is_retryable(exc) or attempt >= MAX_RETRIES:
+                if _is_retryable(exc):
+                    last_exc = exc
+                    break
+                raise EmbeddingError(f"Non-retryable error calling Gemini embed_content: {exc}") from exc
+            last_exc = exc
+            sleep_time = min(backoff, MAX_BACKOFF_SECONDS) + random.uniform(0, 0.5)
+            logger.warning(
+                "Gemini embed_content transient error (attempt %d/%d): %s — retrying in %.1fs",
+                attempt + 1,
+                MAX_RETRIES,
+                exc,
+                sleep_time,
+            )
+            time.sleep(sleep_time)
+            backoff *= BACKOFF_MULTIPLIER
+
+        except EmbeddingError:
+            raise
+
+        except Exception as exc:  # noqa: BLE001 - non-retryable, fail fast
+            raise EmbeddingError(f"Unexpected error calling Gemini embed_content: {exc}") from exc
+
+    raise EmbeddingError(
+        f"Failed to embed batch of {len(texts)} after {MAX_RETRIES} retries: {last_exc}"
+    ) from last_exc
+
