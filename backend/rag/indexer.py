@@ -116,3 +116,93 @@ def save_metadata(metadata: dict[str, dict]) -> None:
     except OSError as exc:
         raise IndexerError(f"Failed to save metadata store to {path}: {exc}") from exc
 
+
+def add_vectors(
+    ids: list[int],
+    vectors: list[list[float]],
+    metadatas: list[dict],
+    index: faiss.Index | None = None,
+) -> None:
+    """
+    Adds vectors to the FAISS index under the given IDs, and stores their
+    metadata. Persists both the index and metadata store to disk.
+
+    Args:
+        ids: list of stable integer IDs (typically Document.id), one per vector.
+        vectors: list of embedding vectors, same length/order as `ids`.
+        metadatas: list of metadata dicts, same length/order as `ids`. Each
+                   is stored under str(id) in the metadata store.
+        index: optional pre-loaded index (avoids a redundant load). If
+               omitted, load_or_create_index() is called.
+
+    Raises:
+        IndexerError: on shape mismatches or FAISS/storage failures.
+    """
+    if not (len(ids) == len(vectors) == len(metadatas)):
+        raise IndexerError(
+            f"ids ({len(ids)}), vectors ({len(vectors)}), and metadatas "
+            f"({len(metadatas)}) must be the same length."
+        )
+    if not ids:
+        return
+
+    with _index_lock:
+        idx = index or load_or_create_index()
+        metadata_store = load_metadata()
+
+        np_vectors = np.array(vectors, dtype="float32")
+        if np_vectors.ndim != 2 or np_vectors.shape[1] != idx.d:
+            raise IndexerError(
+                f"Vector dimensionality {np_vectors.shape[-1] if np_vectors.ndim == 2 else '?'} "
+                f"does not match index dimensionality {idx.d}."
+            )
+
+        np_vectors = _normalize(np_vectors)
+        np_ids = np.array(ids, dtype="int64")
+
+        try:
+            idx.add_with_ids(np_vectors, np_ids)
+        except Exception as exc:  # noqa: BLE001
+            raise IndexerError(f"Failed to add vectors to FAISS index: {exc}") from exc
+
+        for doc_id, meta in zip(ids, metadatas):
+            metadata_store[str(doc_id)] = meta
+
+        save_index(idx)
+        save_metadata(metadata_store)
+
+    logger.info("Added %d vector(s) to the FAISS index.", len(ids))
+
+
+def remove_vectors(ids: list[int], index: faiss.Index | None = None) -> int:
+    """
+    Removes vectors by ID from the FAISS index and metadata store.
+
+    Args:
+        ids: list of document IDs to remove.
+        index: optional pre-loaded index.
+
+    Returns:
+        Number of vectors actually removed from the FAISS index.
+    """
+    if not ids:
+        return 0
+
+    with _index_lock:
+        idx = index or load_or_create_index()
+        metadata_store = load_metadata()
+
+        np_ids = np.array(ids, dtype="int64")
+        try:
+            n_removed = idx.remove_ids(np_ids)
+        except Exception as exc:  # noqa: BLE001
+            raise IndexerError(f"Failed to remove vectors from FAISS index: {exc}") from exc
+
+        for doc_id in ids:
+            metadata_store.pop(str(doc_id), None)
+
+        save_index(idx)
+        save_metadata(metadata_store)
+
+    logger.info("Removed %d vector(s) from the FAISS index.", n_removed)
+    return int(n_removed)
