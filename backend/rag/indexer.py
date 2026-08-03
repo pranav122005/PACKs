@@ -75,3 +75,44 @@ def load_or_create_index(dim: int | None = None) -> faiss.Index:
             logger.info("Created new empty FAISS index (dim=%d) at %s", dim, path)
 
         return _index
+
+
+def save_index(index: faiss.Index) -> None:
+    """Persists the FAISS index to disk."""
+    path = _index_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        faiss.write_index(index, str(path))
+    except Exception as exc:  # noqa: BLE001
+        raise IndexerError(f"Failed to save FAISS index to {path}: {exc}") from exc
+
+
+def load_metadata() -> dict[str, dict]:
+    """Loads the metadata store (id -> metadata dict) from disk, caching in-process."""
+    global _metadata
+    if _metadata is not None:
+        return _metadata
+
+    path = _metadata_path()
+    if path.exists():
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                _metadata = json.load(f)
+        except (json.JSONDecodeError, OSError) as exc:
+            raise IndexerError(f"Failed to load metadata store from {path}: {exc}") from exc
+    else:
+        _metadata = {}
+
+    return _metadata
+
+
+def save_metadata(metadata: dict[str, dict]) -> None:
+    """Persists the metadata store to disk."""
+    path = _metadata_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+    except OSError as exc:
+        raise IndexerError(f"Failed to save metadata store to {path}: {exc}") from exc
+
