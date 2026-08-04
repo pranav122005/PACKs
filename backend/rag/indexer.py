@@ -206,3 +206,59 @@ def remove_vectors(ids: list[int], index: faiss.Index | None = None) -> int:
 
     logger.info("Removed %d vector(s) from the FAISS index.", n_removed)
     return int(n_removed)
+
+def search(
+    query_vector: list[float],
+    top_k: int = 5,
+    index: faiss.Index | None = None,
+    min_score: float | None = None,
+) -> list[dict]:
+    """
+    Runs top-K cosine similarity search against the index.
+
+    Args:
+        query_vector: the embedded query.
+        top_k: number of results to return.
+        index: optional pre-loaded index.
+        min_score: if set, filters out results with cosine similarity below
+                   this threshold (scores range roughly -1..1).
+
+    Returns:
+        List of dicts, best match first:
+        {"id": int, "score": float, "metadata": {...}}
+    """
+    with _index_lock:
+        idx = index or load_or_create_index()
+        metadata_store = load_metadata()
+
+    if idx.ntotal == 0:
+        return []
+
+    np_query = np.array([query_vector], dtype="float32")
+    if np_query.shape[1] != idx.d:
+        raise IndexerError(
+            f"Query vector dimensionality {np_query.shape[1]} does not match "
+            f"index dimensionality {idx.d}."
+        )
+    np_query = _normalize(np_query)
+
+    k = min(top_k, idx.ntotal)
+    scores, ids = idx.search(np_query, k)
+
+    results = []
+    for score, doc_id in zip(scores[0], ids[0]):
+        if doc_id == -1:
+            continue  # FAISS pads with -1 when fewer than k results exist
+        if min_score is not None and score < min_score:
+            continue
+        meta = metadata_store.get(str(int(doc_id)))
+        if meta is None:
+            logger.warning(
+                "FAISS returned id %d with no matching metadata entry — skipping.", doc_id
+            )
+            continue
+        results.append({"id": int(doc_id), "score": float(score), "metadata": meta})
+
+    return results
+
+
