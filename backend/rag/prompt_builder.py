@@ -79,3 +79,26 @@ def build_user_message(question: str, context_block: str) -> str:
         f"Answer using only the CONTEXT above, with [n] citation markers."
     )
 
+
+def build_messages(question: str, retrieved_chunks: list[dict]) -> tuple[list[dict], list[dict]]:
+    """
+    Builds the full Groq chat `messages` list for a grounded RAG answer,
+    plus the citations list to return alongside the model's answer.
+
+    Args:
+        question: the user's question.
+        retrieved_chunks: output of indexer.search().
+
+    Returns:
+        (messages, citations)
+        messages: [{"role": "system", "content": ...}, {"role": "user", "content": ...}]
+        citations: see format_context_block()
+    """
+    context_block, citations = format_context_block(retrieved_chunks)
+
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": build_user_message(question, context_block)},
+    ]
+
+    return messages, citations
