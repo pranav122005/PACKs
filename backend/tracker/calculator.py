@@ -69,3 +69,44 @@ def format_logged_item(log: DailyLog) -> dict:
     }
 
 
+def format_logged_items(logs: list[DailyLog]) -> list[dict]:
+    """Formats a list of DailyLog rows into clean dicts for the frontend, newest first."""
+    sorted_logs = sorted(logs, key=lambda l: l.logged_at or datetime.min, reverse=True)
+    return [format_logged_item(log) for log in sorted_logs]
+
+
+def get_daily_summary(target_date: date_cls) -> dict:
+    """
+    Aggregates all DailyLog entries for a specific date into total macros
+    plus the formatted list of individual logged meals.
+
+    Args:
+        target_date: a datetime.date to aggregate logs for.
+
+    Returns:
+        {
+            "date": "YYYY-MM-DD",
+            "totals": {"calories": float, "protein": float, "carbs": float, "fats": float},
+            "meal_count": int,
+            "meals": [ {...formatted log...}, ... ]
+        }
+    """
+    logs = (
+        DailyLog.query.filter(DailyLog.log_date == target_date)
+        .join(FoodItem, DailyLog.food_item_id == FoodItem.id)
+        .all()
+    )
+
+    totals = {
+        "calories": round(sum(log.calories for log in logs), ROUND_DECIMALS),
+        "protein": round(sum(log.protein for log in logs), ROUND_DECIMALS),
+        "carbs": round(sum(log.carbs for log in logs), ROUND_DECIMALS),
+        "fats": round(sum(log.fats for log in logs), ROUND_DECIMALS),
+    }
+
+    return {
+        "date": target_date.isoformat(),
+        "totals": totals,
+        "meal_count": len(logs),
+        "meals": format_logged_items(logs),
+    }
