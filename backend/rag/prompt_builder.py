@@ -27,3 +27,55 @@ beyond what these rules already require.
 
 Respond in plain text (not JSON, not markdown headers) with inline [n] citation markers."""
 
+
+def format_context_block(retrieved_chunks: list[dict]) -> tuple[str, list[dict]]:
+    """
+    Formats retrieved FAISS results into a numbered CONTEXT block for the
+    prompt, and builds the parallel citations list to return to the client.
+
+    Args:
+        retrieved_chunks: output of indexer.search(), i.e. a list of
+            {"id": int, "score": float, "metadata": {"content", "filename",
+             "source_id", "location", "chunk_index", ...}}
+
+    Returns:
+        (context_block_text, citations)
+        citations: [{"marker": 1, "filename": ..., "location": ...,
+                     "source_id": ..., "score": ...}, ...]
+    """
+    context_lines = []
+    citations = []
+
+    for i, result in enumerate(retrieved_chunks, start=1):
+        meta = result.get("metadata", {})
+        content = meta.get("content", "")
+        filename = meta.get("filename", "unknown source")
+        location = meta.get("location")
+        source_id = meta.get("source_id")
+
+        location_str = f", {location}" if location else ""
+        context_lines.append(f"[{i}] (Source: {filename}{location_str})\n{content}")
+
+        citations.append(
+            {
+                "marker": i,
+                "filename": filename,
+                "location": location,
+                "source_id": source_id,
+                "score": round(result.get("score", 0.0), 4),
+            }
+        )
+
+    context_block = "\n\n".join(context_lines)
+    return context_block, citations
+
+
+def build_user_message(question: str, context_block: str) -> str:
+    """Builds the user-turn content combining the numbered context and the question."""
+    return (
+        f"CONTEXT:\n\n{context_block}\n\n"
+        f"---\n\n"
+        f"QUESTION: {question}\n\n"
+        f"Answer using only the CONTEXT above, with [n] citation markers."
+    )
+
