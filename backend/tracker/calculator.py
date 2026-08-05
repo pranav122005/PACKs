@@ -51,3 +51,21 @@ def parse_date_string(date_str: str | None) -> date_cls:
         raise ValueError(f"Invalid date format '{date_str}'. Expected YYYY-MM-DD.") from exc
 
 
+def format_logged_item(log: DailyLog) -> dict:
+    """Formats a single DailyLog (with its related FoodItem) for frontend rendering."""
+    food_item = log.food_item
+    return {
+        "log_id": log.id,
+        "food_item_id": log.food_item_id,
+        "name": food_item.name if food_item else "Unknown item",
+        "servings_consumed": log.servings,
+        "calories": log.calories,
+        "protein": log.protein,
+        "carbs": log.carbs,
+        "fats": log.fats,
+        "ingredients": (food_item.ingredients or []) if food_item else [],
+        "allergens": (food_item.allergens or []) if food_item else [],
+        "logged_at": log.logged_at.isoformat() if log.logged_at else None,
+    }
+
+
