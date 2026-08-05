@@ -34,3 +34,20 @@ def calculate_scaled_macros(food_item: FoodItem, servings: float) -> dict:
         "fats": round(food_item.fats * servings, ROUND_DECIMALS),
     }
 
+
+def parse_date_string(date_str: str | None) -> date_cls:
+    """
+    Parses a 'YYYY-MM-DD' date string. Defaults to today if None/empty.
+
+    Raises:
+        ValueError: if date_str is present but not valid YYYY-MM-DD.
+    """
+    if not date_str:
+        return date_cls.today()
+
+    try:
+        return datetime.strptime(date_str.strip(), "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError(f"Invalid date format '{date_str}'. Expected YYYY-MM-DD.") from exc
+
+
