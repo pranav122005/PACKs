@@ -1,0 +1,2422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#09090b">
+  <title>PACKS — Food Label Intelligence</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface-1: #121215;
+      --surface-2: #18181c;
+      --surface-hover: #1f1f24;
+      --border: #27272a;
+      --border-subtle: #1c1c20;
+      --text: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ffffff;
+      --accent-contrast: #09090b;
+      --radius-sm: 6px;
+      --radius-md: 9px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.035) 0%, transparent 65%);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Layout */
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Left Sidebar (ChatGPT inspired) */
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      background: #0c0c0e;
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      transition: transform 0.2s ease;
+    }
+
+    .sidebar-brand {
+      height: 56px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-title .brand-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #1e1e24;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .sidebar-action-wrap {
+      padding: 12px 14px;
+    }
+
+    .btn-new-scan {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .btn-new-scan:hover {
+      background: var(--surface-hover);
+      border-color: #3f3f46;
+      color: #fff;
+    }
+
+    .sidebar-nav-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar-nav-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar-nav-scroll::-webkit-scrollbar-thumb {
+      background: #222;
+      border-radius: 4px;
+    }
+
+    .nav-group-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 6px 8px 4px;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 450;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .nav-item svg {
+      width: 15px;
+      height: 15px;
+      stroke-width: 1.75;
+      stroke: currentColor;
+      fill: none;
+      flex-shrink: 0;
+    }
+
+    .nav-item:hover {
+      background: var(--surface-1);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--surface-2);
+      border-color: var(--border-subtle);
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* Recent History in Sidebar */
+    .history-section {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .history-item:hover {
+      background: var(--surface-1);
+      color: var(--text);
+    }
+
+    .history-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .history-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      color: #ddd;
+    }
+
+    .history-date {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .history-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.55;
+      transition: opacity 0.12s, color 0.12s;
+    }
+
+    .history-delete:hover {
+      opacity: 1;
+      color: #fff;
+    }
+
+    .history-delete svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .history-empty {
+      padding: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Main Workspace */
+    .main-workspace {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Top bar */
+    .topbar {
+      height: 56px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn-menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-menu-toggle svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .topbar-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .active-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-1);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    /* Content Area */
+    .workspace-content {
+      flex: 1;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+
+    /* Page Views */
+    .page-view {
+      display: none;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    .page-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* UI Surfaces */
+    .surface-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .surface-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .surface-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #fff;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: all 0.12s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: #ffffff;
+      color: #09090b;
+      border-color: rgba(255, 255, 255, 0.9);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #f0f0f0;
+      transform: translateY(-0.5px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--surface-2);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--surface-hover);
+      border-color: #3f3f46;
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* 1. New Scan Workspace Specifics */
+    .scanner-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .upload-zone {
+      min-height: 220px;
+      border: 1px dashed #3f3f46;
+      border-radius: var(--radius-lg);
+      background: #0d0d10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: #71717a;
+      background: #111115;
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .upload-icon-wrap {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .upload-icon-wrap svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    .upload-main-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .upload-sub-text {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .preview-container {
+      margin-top: 14px;
+      position: relative;
+      display: none;
+    }
+
+    .preview-img {
+      width: 100%;
+      max-height: 230px;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: #050507;
+    }
+
+    .progress-bar-wrap {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .progress-track {
+      height: 3px;
+      background: #27272a;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #ffffff;
+      transition: width 0.15s ease;
+    }
+
+    .ocr-status {
+      min-height: 18px;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .scanner-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .scanner-actions .btn {
+      flex: 1;
+    }
+
+    .ocr-textarea {
+      width: 100%;
+      min-height: 280px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: #0c0c0e;
+      color: #eee;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      resize: vertical;
+    }
+
+    .ocr-textarea:focus {
+      outline: none;
+      border-color: #52525b;
+    }
+
+    /* 2. Analysis Report View (Opens automatically after scan or from history) */
+    .report-header-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .report-product-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .report-meta-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .report-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 7 Report Sections inside single report */
+    .report-section {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      margin-bottom: 16px;
+    }
+
+    .report-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .macros-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .macro-cell {
+      background: #0d0d10;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 13px;
+    }
+
+    .macro-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .macro-val {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .report-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .report-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e4e4e7;
+    }
+
+    .bullet-point {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #71717a;
+      margin-top: 7px;
+      flex-shrink: 0;
+    }
+
+    .report-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e4e4e7;
+    }
+
+    /* Expandables */
+    .expandable-wrap {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    details.expandable-section {
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    details.expandable-section summary {
+      padding: 12px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    details.expandable-section summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.expandable-section summary:hover {
+      color: #fff;
+      background: var(--surface-2);
+    }
+
+    details.expandable-section summary::after {
+      content: "＋";
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    details.expandable-section[open] summary::after {
+      content: "－";
+    }
+
+    .expandable-content {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border-subtle);
+      background: #09090b;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.6;
+      color: #aaa;
+      white-space: pre-wrap;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    /* 3. Dashboard View */
+    .dashboard-progress-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .dash-calorie-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .dash-calorie-stat {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .dash-calorie-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .dash-goal-control {
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .dash-progress-track {
+      height: 8px;
+      background: #27272a;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 14px 0 16px;
+    }
+
+    .dash-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #ffffff;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .metric-card small {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .metric-card strong {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .data-table-wrap {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 12px 18px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: #0d0d10;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+    }
+
+    .data-table td {
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: #e4e4e7;
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tr:hover td {
+      background: var(--surface-hover);
+    }
+
+    /* 4. Daily Log View */
+    .log-controls-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .date-input {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      outline: none;
+    }
+
+    .date-input:focus {
+      border-color: #52525b;
+    }
+
+    .manual-entry-panel {
+      display: none;
+      background: #0d0d10;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    .manual-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+    }
+
+    .text-input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-1);
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: #52525b;
+    }
+
+    /* 5. AI Assistant View */
+    .chat-container {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      height: 540px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .chat-bubble {
+      max-width: 82%;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      color: #f4f4f5;
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: #ffffff;
+      color: #09090b;
+      font-weight: 500;
+    }
+
+    .chat-input-bar {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      gap: 10px;
+      background: #0d0d10;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: #52525b;
+    }
+
+    /* Empty states */
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .empty-state h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      max-width: 360px;
+      margin: 0 auto 16px;
+      color: var(--text-muted);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #ffffff;
+      color: #09090b;
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Mobile bottom navigation */
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: rgba(12, 12, 14, 0.95);
+      border-top: 1px solid var(--border-subtle);
+      backdrop-filter: blur(12px);
+      z-index: 50;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 10px;
+    }
+
+    .mobile-nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 10px;
+      padding: 6px;
+      flex: 1;
+      text-align: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .mobile-nav-btn.active {
+      color: #fff;
+    }
+
+    .mobile-nav-btn svg {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    /* Backdrop for drawer */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(2px);
+      z-index: 35;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 860px) {
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .sidebar-backdrop.open {
+        display: block;
+      }
+
+      .btn-menu-toggle {
+        display: block;
+      }
+
+      .scanner-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .macros-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .metrics-row {
+        grid-template-columns: 1fr;
+      }
+
+      .manual-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mobile-bottom-nav {
+        display: flex;
+      }
+
+      .main-workspace {
+        padding-bottom: 60px;
+      }
+
+      .workspace-content {
+        padding: 20px 16px 50px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(false)"></div>
+
+  <div class="app-layout">
+    <!-- Final Consolidated Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-title">
+          <span>PACKS</span>
+          <span class="brand-dot"></span>
+        </div>
+        <span class="brand-badge">Food AI</span>
+      </div>
+
+      <div class="sidebar-action-wrap">
+        <button class="btn-new-scan" onclick="showPage('scan'); toggleSidebar(false);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>New scan</span>
+        </button>
+      </div>
+
+      <div class="sidebar-nav-scroll">
+        <div class="nav-group-label">Main Navigation</div>
+        <nav class="nav-links">
+          <a class="nav-item active" data-nav="scan" onclick="showPage('scan')">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <span>New Scan</span>
+          </a>
+          <a class="nav-item" data-nav="dashboard" onclick="showPage('dashboard')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            <span>Dashboard</span>
+          </a>
+          <a class="nav-item" data-nav="assistant" onclick="showPage('assistant')">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>AI Assistant</span>
+          </a>
+          <a class="nav-item" data-nav="daily-log" onclick="showPage('daily-log')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Daily Log</span>
+          </a>
+        </nav>
+
+        <!-- Recent History below Main Navigation -->
+        <div class="history-section">
+          <div class="nav-group-label">Recent History</div>
+          <div id="historyList" class="nav-links">
+            <div class="history-empty">No scans yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <span>PACKS · Intelligence</span>
+        <span>v2.0</span>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-workspace">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-menu-toggle" onclick="toggleSidebar(true)" aria-label="Open sidebar">
+            <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <div class="topbar-title" id="pageTitle">New Scan</div>
+        </div>
+        <div class="topbar-actions">
+          <div class="active-badge" id="activeScanIndicator">
+            <span class="status-dot"></span>
+            <span id="activeScanLabel">Ready</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="workspace-content">
+        <!-- 1. NEW SCAN (Default Page) -->
+        <section class="page-view active" data-page="scan">
+          <div class="page-header">
+            <h1 class="page-title">New Scan</h1>
+            <p class="page-subtitle">Upload or drop a food package label image. Automatic OCR begins immediately.</p>
+          </div>
+
+          <div class="scanner-grid">
+            <div>
+              <label class="upload-zone" id="uploadZone" for="imageInput">
+                <div class="upload-icon-wrap">
+                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                <div>
+                  <div class="upload-main-text">Upload or drop label image</div>
+                  <div class="upload-sub-text">PNG, JPG, WEBP · Auto OCR</div>
+                </div>
+                <input type="file" id="imageInput" accept="image/*">
+              </label>
+
+              <div class="preview-container" id="previewContainer">
+                <img id="imagePreview" class="preview-img" alt="Label Preview">
+              </div>
+
+              <div class="progress-bar-wrap" id="progressBarWrap">
+                <div class="progress-meta">
+                  <span id="ocrStatusLabel">Recognizing text…</span>
+                  <span id="ocrPercentLabel">0%</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" id="ocrProgressFill"></div>
+                </div>
+              </div>
+
+              <div class="ocr-status" id="ocrStatusText"></div>
+
+              <div class="scanner-actions">
+                <button class="btn btn-primary" id="analyseBtn" onclick="analyzeProduct()" disabled>
+                  <span>Analyse</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="clearScanner()" style="flex: 0 0 auto;">
+                  <span>Clear</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div class="surface-card" style="margin-bottom: 0;">
+                <div class="surface-card-header">
+                  <span class="surface-card-title">Extracted Text</span>
+                  <span style="font-size: 11px; color: var(--text-muted);">Editable</span>
+                </div>
+                <textarea id="ocrText" class="ocr-textarea" placeholder="Extracted label text will appear here automatically after image selection. You may edit or paste text directly."></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. ANALYSIS REPORT (Single Consolidated Report View) -->
+        <section class="page-view" data-page="report">
+          <div class="page-header">
+            <h1 class="page-title">Analysis Report</h1>
+            <p class="page-subtitle">Fact-grounded nutritional analysis of the scanned package.</p>
+          </div>
+
+          <div id="reportEmptyState" class="empty-state">
+            <h3>No Report Loaded</h3>
+            <p>Upload a food label in New Scan or pick a previous scan from Recent History.</p>
+            <button class="btn btn-primary" onclick="showPage('scan')">Go to New Scan</button>
+          </div>
+
+          <div id="reportContent" style="display: none;">
+            <div class="report-header-card">
+              <div>
+                <div class="report-product-name" id="reportProductName">Product Name</div>
+                <div class="report-meta-date" id="reportDate">—</div>
+              </div>
+              <div class="report-header-actions">
+                <button class="btn btn-primary btn-sm" onclick="addCurrentScanToDailyLog()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>Add to Daily Log</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="copyReport()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Report Section: Nutrition (Calories & Macros) -->
+            <div class="report-section">
+              <div class="report-section-title">
+                <span>Nutrition & Macronutrients</span>
+              </div>
+              <div class="macros-grid">
+                <div class="macro-cell">
+                  <div class="macro-label">Calories</div>
+                  <div class="macro-val" id="macroCalories">—</div>
+                </div>
+                <div class="macro-cell">
+                  <div class="macro-label">Protein</div>
+                  <div class="macro-val" id="macroProtein">—</div>
+                </div>
+                <div class="macro-cell">
+                  <div class="macro-label">Carbohydrates</div>
+                  <div class="macro-val" id="macroCarbs">—</div>
+                </div>
+                <div class="macro-cell">
+                  <div class="macro-label">Total Sugar</div>
+                  <div class="macro-val" id="macroSugar">—</div>
+                </div>
+                <div class="macro-cell">
+                  <div class="macro-label">Total Fat</div>
+                  <div class="macro-val" id="macroFat">—</div>
+                </div>
+                <div class="macro-cell">
+                  <div class="macro-label">Saturated Fat</div>
+                  <div class="macro-val" id="macroSatFat">—</div>
+                </div>
+                <div class="macro-cell">
+                  <div class="macro-label">Dietary Fiber</div>
+                  <div class="macro-val" id="macroFiber">—</div>
+                </div>
+                <div class="macro-cell">
+                  <div class="macro-label">Sodium / Salt</div>
+                  <div class="macro-val" id="macroSodium">—</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Report Section: Ingredients -->
+            <div class="report-section">
+              <div class="report-section-title">
+                <span>Ingredients</span>
+              </div>
+              <ul class="report-list" id="reportIngredientsList">
+                <li class="report-list-item"><span class="bullet-point"></span><span>No ingredient data parsed.</span></li>
+              </ul>
+            </div>
+
+            <!-- Report Section: Additives -->
+            <div class="report-section">
+              <div class="report-section-title">
+                <span>Additives</span>
+              </div>
+              <ul class="report-list" id="reportAdditivesList">
+                <li class="report-list-item"><span class="bullet-point"></span><span>None detected.</span></li>
+              </ul>
+            </div>
+
+            <!-- Report Section: Good Points -->
+            <div class="report-section">
+              <div class="report-section-title">
+                <span>Good Points</span>
+              </div>
+              <ul class="report-list" id="reportPositivesList">
+                <li class="report-list-item"><span class="bullet-point"></span><span>No specific positives highlighted.</span></li>
+              </ul>
+            </div>
+
+            <!-- Report Section: Things to Watch -->
+            <div class="report-section">
+              <div class="report-section-title">
+                <span>Things to Watch</span>
+              </div>
+              <ul class="report-list" id="reportWatchoutsList">
+                <li class="report-list-item"><span class="bullet-point"></span><span>No notable concerns detected.</span></li>
+              </ul>
+            </div>
+
+            <!-- Report Section: Quick Verdict -->
+            <div class="report-section">
+              <div class="report-section-title">
+                <span>Quick Verdict</span>
+              </div>
+              <p class="report-text" id="reportVerdictText">—</p>
+            </div>
+
+            <!-- Expandable Transcripts -->
+            <div class="expandable-wrap">
+              <details class="expandable-section">
+                <summary>Raw AI Analysis Text</summary>
+                <div class="expandable-content" id="reportRawAi">—</div>
+              </details>
+              <details class="expandable-section">
+                <summary>Raw OCR Extracted Text</summary>
+                <div class="expandable-content" id="reportRawOcr">—</div>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. DASHBOARD -->
+        <section class="page-view" data-page="dashboard">
+          <div class="page-header">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Daily calorie tracking and nutritional intake from your logged foods.</p>
+          </div>
+
+          <div class="dashboard-progress-card">
+            <div class="dash-calorie-header">
+              <div>
+                <div class="dash-calorie-stat" id="dashConsumedCalories">0 <span style="font-size: 16px; font-weight: 500; color: var(--text-muted);">kcal</span></div>
+                <div class="dash-calorie-sub">Calories Consumed Today</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 16px; font-weight: 600; color: #fff;" id="dashRemainingCalories">2,000 kcal</div>
+                <div class="dash-calorie-sub"><span id="dashGoalLabel">Goal: 2,000 kcal</span> · <span class="dash-goal-control" onclick="editCalorieGoal()">Edit Goal</span></div>
+              </div>
+            </div>
+
+            <div class="dash-progress-track">
+              <div class="dash-progress-fill" id="dashCalorieProgress"></div>
+            </div>
+          </div>
+
+          <div class="metrics-row">
+            <div class="metric-card">
+              <small>Protein Consumed</small>
+              <strong id="dashTotalProtein">0g</strong>
+            </div>
+            <div class="metric-card">
+              <small>Carbs Consumed</small>
+              <strong id="dashTotalCarbs">0g</strong>
+            </div>
+            <div class="metric-card">
+              <small>Fat Consumed</small>
+              <strong id="dashTotalFat">0g</strong>
+            </div>
+          </div>
+
+          <div class="surface-card-header" style="margin-top: 12px;">
+            <span class="surface-card-title">Recent Food Activity</span>
+            <button class="btn btn-secondary btn-sm" onclick="showPage('daily-log')">Open Daily Log</button>
+          </div>
+
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Food Item</th>
+                  <th>Quantity</th>
+                  <th>Calories</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="dashActivityTableBody">
+                <tr>
+                  <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No foods logged for today yet. Scan a food label or add an entry in Daily Log.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 4. DAILY LOG -->
+        <section class="page-view" data-page="daily-log">
+          <div class="page-header">
+            <h1 class="page-title">Daily Log</h1>
+            <p class="page-subtitle">Track consumed food items, quantities, and macronutrient totals.</p>
+          </div>
+
+          <div class="log-controls-card">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label for="logDateInput" style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Date</label>
+              <input type="date" id="logDateInput" class="date-input" onchange="renderDailyLog()">
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="toggleManualEntryPanel()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>+ Add Food Manually</span>
+            </button>
+          </div>
+
+          <!-- Manual Entry Form -->
+          <div class="manual-entry-panel" id="manualEntryPanel">
+            <form onsubmit="handleManualAddFood(event)">
+              <div class="manual-grid">
+                <div class="field-group">
+                  <label>Food Name</label>
+                  <input type="text" id="manualName" class="text-input" placeholder="e.g. Greek Yogurt" required>
+                </div>
+                <div class="field-group">
+                  <label>Quantity</label>
+                  <input type="text" id="manualQty" class="text-input" placeholder="1 serving" value="1 serving">
+                </div>
+                <div class="field-group">
+                  <label>Calories</label>
+                  <input type="number" id="manualCal" class="text-input" placeholder="120" required>
+                </div>
+                <div class="field-group">
+                  <label>Protein (g)</label>
+                  <input type="number" id="manualProt" class="text-input" placeholder="15" step="0.5">
+                </div>
+                <div class="field-group">
+                  <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; height: 35px;">Add Entry</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Daily Totals Summary -->
+          <div class="metrics-row" style="margin-bottom: 20px;">
+            <div class="metric-card">
+              <small>Daily Calories</small>
+              <strong id="logDailyCal">0 kcal</strong>
+            </div>
+            <div class="metric-card">
+              <small>Daily Protein</small>
+              <strong id="logDailyProt">0g</strong>
+            </div>
+            <div class="metric-card">
+              <small>Daily Carbs / Fat</small>
+              <strong style="font-size: 15px;" id="logDailyCarbFat">0g C · 0g F</strong>
+            </div>
+          </div>
+
+          <!-- Entries Table -->
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Food Item</th>
+                  <th>Quantity</th>
+                  <th>Calories</th>
+                  <th>Macros (P/C/F)</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="logTableBody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No food entries logged for this date.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 5. AI ASSISTANT -->
+        <section class="page-view" data-page="assistant">
+          <div class="page-header">
+            <h1 class="page-title">AI Assistant</h1>
+            <p class="page-subtitle">Ask questions about food labels, ingredients, or dietary science.</p>
+          </div>
+
+          <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+              <div class="chat-bubble assistant">
+                Hello. I am PACKS Nutrition Assistant. You can ask me any question about nutrition facts, ingredient safety, additives, or your currently scanned label.
+              </div>
+            </div>
+            <form class="chat-input-bar" onsubmit="handleChatSubmit(event)">
+              <input type="text" id="chatInput" class="chat-input" placeholder="Ask a question about your food label…" autocomplete="off">
+              <button type="submit" class="btn btn-primary" id="chatSendBtn">Send</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Mobile Bottom Navigation (4 Core Views) -->
+  <nav class="mobile-bottom-nav">
+    <button class="mobile-nav-btn active" data-nav="scan" onclick="showPage('scan')">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      <span>Scan</span>
+    </button>
+    <button class="mobile-nav-btn" data-nav="dashboard" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="mobile-nav-btn" data-nav="assistant" onclick="showPage('assistant')">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      <span>AI</span>
+    </button>
+    <button class="mobile-nav-btn" data-nav="daily-log" onclick="showPage('daily-log')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg>
+      <span>Log</span>
+    </button>
+  </nav>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toastNotification">Action complete</div>
+
+  <script>
+    // =============================================
+    // APPLICATION STATE & STORAGE
+    // =============================================
+    let selectedFile = null;
+    let currentScan = null;
+    let scansHistory = [];
+
+    // Calorie Goal (Default 2000 kcal)
+    function getCalorieGoal() {
+      const stored = localStorage.getItem("packs_calorie_goal");
+      return stored ? parseInt(stored, 10) : 2000;
+    }
+
+    function setCalorieGoal(goal) {
+      localStorage.setItem("packs_calorie_goal", goal.toString());
+    }
+
+    function editCalorieGoal() {
+      const current = getCalorieGoal();
+      const entered = prompt("Enter your daily calorie goal (kcal):", current);
+      if (entered && !isNaN(entered) && parseInt(entered, 10) > 0) {
+        setCalorieGoal(parseInt(entered, 10));
+        renderDashboard();
+      }
+    }
+
+    // Daily Logs Store in localStorage
+    // Format: { "YYYY-MM-DD": [ { id, name, qty, cal, prot, carb, fat, time } ] }
+    function getDailyLogs() {
+      try {
+        const stored = localStorage.getItem("packs_daily_logs");
+        return stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveDailyLogs(logs) {
+      localStorage.setItem("packs_daily_logs", JSON.stringify(logs));
+    }
+
+    function getTodayString() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toastNotification");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2500);
+    }
+
+    // =============================================
+    // DOM ELEMENTS
+    // =============================================
+    const imageInput = document.getElementById("imageInput");
+    const imagePreview = document.getElementById("imagePreview");
+    const previewContainer = document.getElementById("previewContainer");
+    const uploadZone = document.getElementById("uploadZone");
+    const progressBarWrap = document.getElementById("progressBarWrap");
+    const ocrProgressFill = document.getElementById("ocrProgressFill");
+    const ocrPercentLabel = document.getElementById("ocrPercentLabel");
+    const ocrStatusLabel = document.getElementById("ocrStatusLabel");
+    const ocrStatusText = document.getElementById("ocrStatusText");
+    const ocrText = document.getElementById("ocrText");
+    const analyseBtn = document.getElementById("analyseBtn");
+    const historyList = document.getElementById("historyList");
+    const logDateInput = document.getElementById("logDateInput");
+
+    // =============================================
+    // DRAG AND DROP & OCR
+    // =============================================
+    ["dragenter", "dragover"].forEach(eventName => {
+      uploadZone.addEventListener(eventName, e => {
+        e.preventDefault();
+        uploadZone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+      uploadZone.addEventListener(eventName, e => {
+        e.preventDefault();
+        uploadZone.classList.remove("dragover");
+      });
+    });
+
+    uploadZone.addEventListener("drop", e => {
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) {
+        handleFileSelection(file);
+      }
+    });
+
+    imageInput.addEventListener("change", function() {
+      if (this.files && this.files[0]) {
+        handleFileSelection(this.files[0]);
+      }
+    });
+
+    function handleFileSelection(file) {
+      selectedFile = file;
+      if (imagePreview.src && imagePreview.src.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview.src);
+      }
+      imagePreview.src = URL.createObjectURL(file);
+      previewContainer.style.display = "block";
+      ocrStatusText.textContent = "Image selected. Extracting text via OCR…";
+      runOcr();
+    }
+
+    async function runOcr() {
+      if (!selectedFile) return;
+
+      analyseBtn.disabled = true;
+      progressBarWrap.style.display = "block";
+      ocrProgressFill.style.width = "0%";
+      ocrPercentLabel.textContent = "0%";
+      ocrStatusLabel.textContent = "Starting OCR…";
+
+      try {
+        const result = await Tesseract.recognize(
+          selectedFile,
+          "eng",
+          {
+            logger: info => {
+              if (info.progress !== undefined) {
+                const percent = Math.round(info.progress * 100);
+                ocrProgressFill.style.width = percent + "%";
+                ocrPercentLabel.textContent = percent + "%";
+                if (info.status) ocrStatusLabel.textContent = info.status;
+              }
+            }
+          }
+        );
+
+        ocrText.value = result.data.text.trim();
+        ocrProgressFill.style.width = "100%";
+        ocrPercentLabel.textContent = "100%";
+        ocrStatusLabel.textContent = "Extraction complete";
+        ocrStatusText.textContent = "Label text extracted. Review if needed, then click Analyse.";
+        analyseBtn.disabled = !ocrText.value.trim();
+      } catch (err) {
+        console.error("OCR error:", err);
+        ocrStatusText.textContent = "OCR extraction error: " + err.message;
+      }
+    }
+
+    ocrText.addEventListener("input", () => {
+      analyseBtn.disabled = !ocrText.value.trim();
+    });
+
+    function clearScanner() {
+      if (imagePreview.src && imagePreview.src.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview.src);
+      }
+      selectedFile = null;
+      imageInput.value = "";
+      imagePreview.removeAttribute("src");
+      previewContainer.style.display = "none";
+      progressBarWrap.style.display = "none";
+      ocrProgressFill.style.width = "0%";
+      ocrPercentLabel.textContent = "0%";
+      ocrStatusText.textContent = "";
+      ocrText.value = "";
+      analyseBtn.disabled = true;
+    }
+
+    // =============================================
+    // AI ANALYSIS (Groq Backend)
+    // =============================================
+    async function analyzeProduct() {
+      const text = ocrText.value.trim();
+      if (!text) {
+        alert("Please provide label text first.");
+        return;
+      }
+
+      const firstLine = text.split("\n").map(l => l.trim()).filter(Boolean)[0] || "Scanned Food Label";
+      const productName = firstLine.substring(0, 48);
+
+      analyseBtn.disabled = true;
+      analyseBtn.textContent = "Analyzing…";
+
+      // Automatically open the Analysis Report page
+      showPage("report");
+      document.getElementById("reportEmptyState").style.display = "none";
+      document.getElementById("reportContent").style.display = "block";
+      document.getElementById("reportProductName").textContent = productName;
+      document.getElementById("reportDate").textContent = "Analyzing in progress…";
+      document.getElementById("reportVerdictText").textContent = "Evaluating ingredients, nutrition facts, and additives…";
+
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            product_name: productName,
+            text: text,
+            instruction: `Analyze this packaged food label OCR text and provide a structured breakdown strictly matching these 7 sections:
+
+PRODUCT: [Product or brand name]
+NUTRITION:
+- Calories: [numerical value with unit or Not listed]
+- Protein: [numerical value with unit or Not listed]
+- Carbohydrates: [numerical value with unit or Not listed]
+- Total sugar: [numerical value with unit or Not listed]
+- Fat: [numerical value with unit or Not listed]
+- Saturated fat: [numerical value with unit or Not listed]
+- Fiber: [numerical value with unit or Not listed]
+- Sodium/salt: [numerical value with unit or Not listed]
+
+INGREDIENTS:
+[Explain key ingredients in simple terms as bullet points]
+
+ADDITIVES:
+[List detected preservatives, artificial sweeteners, colors, emulsifiers as bullet points, or say 'None detected']
+
+GOOD POINTS:
+[List positive nutritional attributes as bullet points]
+
+THINGS TO WATCH:
+[List nutritional watchouts e.g. high sugar, high sodium, saturated fat as bullet points]
+
+QUICK VERDICT:
+[Short concise summary verdict of product nutritional quality]`
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Analysis failed.");
+        }
+
+        currentScan = {
+          id: data.id,
+          product_name: data.product_name || productName,
+          ocr_text: text,
+          ai_analysis: data.result,
+          created_at: new Date().toISOString()
+        };
+
+        renderAnalysisReport(currentScan);
+        loadHistory();
+      } catch (err) {
+        console.error("Analysis error:", err);
+        document.getElementById("reportVerdictText").textContent = "Analysis failed: " + err.message;
+      } finally {
+        analyseBtn.disabled = false;
+        analyseBtn.textContent = "Analyse";
+      }
+    }
+
+    // =============================================
+    // PARSE & RENDER ANALYSIS REPORT (One Consolidated Report)
+    // =============================================
+    function parseAiAnalysis(rawText) {
+      const result = {
+        product: "",
+        nutrition: {},
+        ingredients: [],
+        additives: [],
+        positives: [],
+        watchouts: [],
+        verdict: ""
+      };
+
+      if (!rawText) return result;
+
+      const lines = rawText.split("\n");
+      let currentSection = "";
+
+      for (let line of lines) {
+        const trimmed = line.trim();
+        const upper = trimmed.toUpperCase();
+
+        if (upper.startsWith("PRODUCT")) { currentSection = "product"; continue; }
+        if (upper.startsWith("NUTRITION")) { currentSection = "nutrition"; continue; }
+        if (upper.startsWith("INGREDIENT")) { currentSection = "ingredients"; continue; }
+        if (upper.startsWith("ADDITIVE")) { currentSection = "additives"; continue; }
+        if (upper.startsWith("GOOD POINT") || upper.startsWith("POSITIVE")) { currentSection = "positives"; continue; }
+        if (upper.startsWith("THINGS TO WATCH") || upper.startsWith("CONCERN")) { currentSection = "watchouts"; continue; }
+        if (upper.startsWith("QUICK VERDICT") || upper.startsWith("VERDICT")) { currentSection = "verdict"; continue; }
+
+        if (!trimmed) continue;
+
+        if (currentSection === "product") {
+          result.product += (result.product ? " " : "") + trimmed.replace(/^:\s*/, "");
+        } else if (currentSection === "nutrition") {
+          const m = trimmed.match(/^[-*•]?\s*([A-Za-z\s/]+):\s*(.+)$/);
+          if (m) {
+            const key = m[1].toLowerCase().trim();
+            result.nutrition[key] = m[2].trim();
+          }
+        } else if (currentSection === "ingredients") {
+          result.ingredients.push(trimmed.replace(/^[-*•]\s*/, ""));
+        } else if (currentSection === "additives") {
+          result.additives.push(trimmed.replace(/^[-*•]\s*/, ""));
+        } else if (currentSection === "positives") {
+          result.positives.push(trimmed.replace(/^[-*•]\s*/, ""));
+        } else if (currentSection === "watchouts") {
+          result.watchouts.push(trimmed.replace(/^[-*•]\s*/, ""));
+        } else if (currentSection === "verdict") {
+          result.verdict += (result.verdict ? " " : "") + trimmed;
+        }
+      }
+
+      return result;
+    }
+
+    function renderAnalysisReport(scan) {
+      if (!scan) return;
+
+      document.getElementById("reportEmptyState").style.display = "none";
+      document.getElementById("reportContent").style.display = "block";
+
+      document.getElementById("reportProductName").textContent = scan.product_name || "Scanned Food Label";
+      document.getElementById("reportDate").textContent = scan.created_at ? ("Recorded on " + scan.created_at.replace("T", " ")) : "";
+
+      const parsed = parseAiAnalysis(scan.ai_analysis);
+      scan._parsed = parsed;
+
+      // Calories & Macros
+      const findMacro = (terms) => {
+        for (let t of terms) {
+          for (let k in parsed.nutrition) {
+            if (k.includes(t)) return parsed.nutrition[k];
+          }
+        }
+        return "—";
+      };
+
+      document.getElementById("macroCalories").textContent = findMacro(["calorie", "energy"]);
+      document.getElementById("macroProtein").textContent = findMacro(["protein"]);
+      document.getElementById("macroCarbs").textContent = findMacro(["carb"]);
+      document.getElementById("macroSugar").textContent = findMacro(["sugar"]);
+      document.getElementById("macroFat").textContent = findMacro(["total fat", "fat"]);
+      document.getElementById("macroSatFat").textContent = findMacro(["saturated"]);
+      document.getElementById("macroFiber").textContent = findMacro(["fiber", "fibre"]);
+      document.getElementById("macroSodium").textContent = findMacro(["sodium", "salt"]);
+
+      // Helper for bullet lists
+      const renderList = (elemId, items, emptyText) => {
+        const el = document.getElementById(elemId);
+        if (!items || items.length === 0) {
+          el.innerHTML = `<li class="report-list-item"><span class="bullet-point"></span><span>${emptyText}</span></li>`;
+        } else {
+          el.innerHTML = items.map(it => `
+            <li class="report-list-item">
+              <span class="bullet-point"></span>
+              <span>${escapeHtml(it)}</span>
+            </li>
+          `).join("");
+        }
+      };
+
+      // Ingredients Section
+      renderList("reportIngredientsList", parsed.ingredients, "No ingredients listed on label.");
+      // Additives Section
+      renderList("reportAdditivesList", parsed.additives, "None detected on visible label.");
+      // Good Points Section
+      renderList("reportPositivesList", parsed.positives, "No notable positives highlighted.");
+      // Things to Watch Section
+      renderList("reportWatchoutsList", parsed.watchouts, "No high-risk warnings on label.");
+
+      // Quick Verdict
+      document.getElementById("reportVerdictText").textContent = parsed.verdict || scan.ai_analysis || "No verdict available.";
+
+      // Expandable Transcripts
+      document.getElementById("reportRawAi").textContent = scan.ai_analysis || "—";
+      document.getElementById("reportRawOcr").textContent = scan.ocr_text || "—";
+
+      // Topbar active scan indicator
+      document.getElementById("activeScanLabel").textContent = scan.product_name;
+    }
+
+    // =============================================
+    // ADD FROM REPORT TO DAILY LOG
+    // =============================================
+    function addCurrentScanToDailyLog() {
+      if (!currentScan) return;
+      const parsed = currentScan._parsed || parseAiAnalysis(currentScan.ai_analysis);
+
+      // Extract numerical values
+      const parseNum = (terms) => {
+        for (let t of terms) {
+          for (let k in parsed.nutrition) {
+            if (k.includes(t)) {
+              const match = parsed.nutrition[k].match(/[\d.]+/);
+              if (match) return parseFloat(match[0]);
+            }
+          }
+        }
+        return 0;
+      };
+
+      const cals = parseNum(["calorie", "energy"]);
+      const prot = parseNum(["protein"]);
+      const carbs = parseNum(["carb"]);
+      const fat = parseNum(["fat"]);
+
+      const today = getTodayString();
+      const logs = getDailyLogs();
+      if (!logs[today]) logs[today] = [];
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      logs[today].unshift({
+        id: Date.now().toString(),
+        name: currentScan.product_name || "Food Item",
+        qty: "1 serving",
+        cal: cals,
+        prot: prot,
+        carb: carbs,
+        fat: fat,
+        time: timeStr
+      });
+
+      saveDailyLogs(logs);
+      showToast(`Added ${currentScan.product_name} to Daily Log`);
+      renderDashboard();
+    }
+
+    // =============================================
+    // DASHBOARD & DAILY LOG RENDERING
+    // =============================================
+    function renderDashboard() {
+      const today = getTodayString();
+      const logs = getDailyLogs();
+      const todayEntries = logs[today] || [];
+
+      let totalCal = 0;
+      let totalProt = 0;
+      let totalCarbs = 0;
+      let totalFat = 0;
+
+      todayEntries.forEach(item => {
+        totalCal += Number(item.cal) || 0;
+        totalProt += Number(item.prot) || 0;
+        totalCarbs += Number(item.carb) || 0;
+        totalFat += Number(item.fat) || 0;
+      });
+
+      const goal = getCalorieGoal();
+      const remaining = Math.max(0, goal - totalCal);
+      const progressPct = Math.min(100, Math.round((totalCal / goal) * 100));
+
+      document.getElementById("dashConsumedCalories").innerHTML = `${Math.round(totalCal)} <span style="font-size: 16px; font-weight: 500; color: var(--text-muted);">kcal</span>`;
+      document.getElementById("dashRemainingCalories").textContent = `${Math.round(remaining)} kcal`;
+      document.getElementById("dashGoalLabel").textContent = `Goal: ${goal} kcal`;
+      document.getElementById("dashCalorieProgress").style.width = `${progressPct}%`;
+
+      document.getElementById("dashTotalProtein").textContent = `${Math.round(totalProt)}g`;
+      document.getElementById("dashTotalCarbs").textContent = `${Math.round(totalCarbs)}g`;
+      document.getElementById("dashTotalFat").textContent = `${Math.round(totalFat)}g`;
+
+      // Render Dashboard Activity Table
+      const tbody = document.getElementById("dashActivityTableBody");
+      if (todayEntries.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No foods logged for today yet. Scan a food label or add an entry in Daily Log.</td></tr>`;
+      } else {
+        tbody.innerHTML = todayEntries.map(e => `
+          <tr>
+            <td><strong>${escapeHtml(e.name)}</strong></td>
+            <td style="color: var(--text-secondary);">${escapeHtml(e.qty || "1 serving")}</td>
+            <td>${Math.round(e.cal)} kcal</td>
+            <td style="color: var(--text-muted); font-size: 12px;">${escapeHtml(e.time || "")}</td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    function renderDailyLog() {
+      const selectedDate = logDateInput.value || getTodayString();
+      const logs = getDailyLogs();
+      const entries = logs[selectedDate] || [];
+
+      let totalCal = 0;
+      let totalProt = 0;
+      let totalCarbs = 0;
+      let totalFat = 0;
+
+      entries.forEach(item => {
+        totalCal += Number(item.cal) || 0;
+        totalProt += Number(item.prot) || 0;
+        totalCarbs += Number(item.carb) || 0;
+        totalFat += Number(item.fat) || 0;
+      });
+
+      document.getElementById("logDailyCal").textContent = `${Math.round(totalCal)} kcal`;
+      document.getElementById("logDailyProt").textContent = `${Math.round(totalProt)}g`;
+      document.getElementById("logDailyCarbFat").textContent = `${Math.round(totalCarbs)}g C · ${Math.round(totalFat)}g F`;
+
+      const tbody = document.getElementById("logTableBody");
+      if (entries.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No food entries logged for this date.</td></tr>`;
+      } else {
+        tbody.innerHTML = entries.map(e => `
+          <tr>
+            <td><strong>${escapeHtml(e.name)}</strong></td>
+            <td style="color: var(--text-secondary);">${escapeHtml(e.qty || "1 serving")}</td>
+            <td>${Math.round(e.cal)} kcal</td>
+            <td style="color: var(--text-muted); font-size: 12px;">${Math.round(e.prot || 0)}g P / ${Math.round(e.carb || 0)}g C / ${Math.round(e.fat || 0)}g F</td>
+            <td style="text-align: right;">
+              <button class="btn btn-secondary btn-sm" onclick="removeDailyLogEntry('${selectedDate}', '${e.id}')">Delete</button>
+            </td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    function toggleManualEntryPanel() {
+      const panel = document.getElementById("manualEntryPanel");
+      panel.style.display = panel.style.display === "block" ? "none" : "block";
+    }
+
+    function handleManualAddFood(e) {
+      e.preventDefault();
+      const selectedDate = logDateInput.value || getTodayString();
+      const name = document.getElementById("manualName").value.trim();
+      const qty = document.getElementById("manualQty").value.trim() || "1 serving";
+      const cal = parseFloat(document.getElementById("manualCal").value) || 0;
+      const prot = parseFloat(document.getElementById("manualProt").value) || 0;
+
+      if (!name) return;
+
+      const logs = getDailyLogs();
+      if (!logs[selectedDate]) logs[selectedDate] = [];
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      logs[selectedDate].unshift({
+        id: Date.now().toString(),
+        name: name,
+        qty: qty,
+        cal: cal,
+        prot: prot,
+        carb: 0,
+        fat: 0,
+        time: timeStr
+      });
+
+      saveDailyLogs(logs);
+      document.getElementById("manualName").value = "";
+      document.getElementById("manualCal").value = "";
+      document.getElementById("manualProt").value = "";
+      toggleManualEntryPanel();
+      renderDailyLog();
+      renderDashboard();
+      showToast(`Logged ${name}`);
+    }
+
+    function removeDailyLogEntry(date, id) {
+      const logs = getDailyLogs();
+      if (logs[date]) {
+        logs[date] = logs[date].filter(item => item.id !== id);
+        saveDailyLogs(logs);
+        renderDailyLog();
+        renderDashboard();
+        showToast("Entry removed");
+      }
+    }
+
+    // =============================================
+    // SCAN HISTORY (SQLite Backend)
+    // =============================================
+    async function loadHistory() {
+      try {
+        const resp = await fetch("/api/history");
+        scansHistory = await resp.json();
+
+        if (!scansHistory || scansHistory.length === 0) {
+          historyList.innerHTML = `<div class="history-empty">No scans yet.</div>`;
+        } else {
+          historyList.innerHTML = scansHistory.map(s => `
+            <div class="history-item" onclick="openScan(${s.id})">
+              <div class="history-info">
+                <div class="history-title">${escapeHtml(s.product_name || "Food Scan")}</div>
+                <div class="history-date">${formatShortDate(s.created_at)}</div>
+              </div>
+              <button class="history-delete" onclick="event.stopPropagation(); deleteScan(${s.id})" title="Delete scan">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          `).join("");
+        }
+      } catch (err) {
+        console.error("Failed to load history:", err);
+      }
+    }
+
+    async function openScan(id) {
+      try {
+        const resp = await fetch(`/api/history/${id}`);
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Failed to load scan");
+
+        currentScan = data;
+        ocrText.value = data.ocr_text || "";
+        renderAnalysisReport(data);
+        showPage("report");
+        toggleSidebar(false);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function deleteScan(id) {
+      if (!confirm("Delete this scan record?")) return;
+      try {
+        const resp = await fetch(`/api/history/${id}`, { method: "DELETE" });
+        if (!resp.ok) throw new Error("Delete failed");
+        if (currentScan && currentScan.id === id) {
+          currentScan = null;
+          document.getElementById("reportContent").style.display = "none";
+          document.getElementById("reportEmptyState").style.display = "block";
+          document.getElementById("activeScanLabel").textContent = "Ready";
+        }
+        loadHistory();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // =============================================
+    // AI ASSISTANT CHAT
+    // =============================================
+    async function handleChatSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById("chatInput");
+      const question = input.value.trim();
+      if (!question) return;
+
+      input.value = "";
+      const chatMessages = document.getElementById("chatMessages");
+
+      // Append user bubble
+      const userBubble = document.createElement("div");
+      userBubble.className = "chat-bubble user";
+      userBubble.textContent = question;
+      chatMessages.appendChild(userBubble);
+
+      // Loading bubble
+      const loadingBubble = document.createElement("div");
+      loadingBubble.className = "chat-bubble assistant";
+      loadingBubble.textContent = "Consulting nutrition knowledge base…";
+      chatMessages.appendChild(loadingBubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      try {
+        const contextText = currentScan ? `ACTIVE PRODUCT: ${currentScan.product_name}\nOCR LABEL TEXT:\n${currentScan.ocr_text}` : "GENERAL NUTRITION QUERY";
+
+        const resp = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            product_name: "AI Assistant Query",
+            text: `${contextText}\n\nUSER QUESTION: ${question}`,
+            instruction: "You are PACKS AI nutrition assistant. Answer the user question concisely, factually, and accurately based on nutrition science and any available label text above."
+          })
+        });
+
+        const data = await resp.json();
+        loadingBubble.textContent = data.result || "I could not generate an answer at this time.";
+      } catch (err) {
+        loadingBubble.textContent = "Error communicating with AI: " + err.message;
+      }
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // =============================================
+    // UTILITIES & ROUTING
+    // =============================================
+    function copyReport() {
+      if (!currentScan || !currentScan.ai_analysis) return;
+      navigator.clipboard.writeText(currentScan.ai_analysis).then(() => {
+        showToast("Report copied to clipboard");
+      }).catch(() => {
+        showToast("Failed to copy report");
+      });
+    }
+
+    function formatShortDate(isoString) {
+      if (!isoString) return "—";
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+      } catch (e) {
+        return isoString;
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    const pageTitles = {
+      scan: "New Scan",
+      report: "Analysis Report",
+      dashboard: "Dashboard",
+      assistant: "AI Assistant",
+      "daily-log": "Daily Log"
+    };
+
+    function showPage(pageId) {
+      document.querySelectorAll(".page-view").forEach(p => {
+        p.classList.toggle("active", p.dataset.page === pageId);
+      });
+
+      document.querySelectorAll(".nav-item").forEach(a => {
+        a.classList.toggle("active", a.dataset.nav === pageId);
+      });
+
+      document.querySelectorAll(".mobile-nav-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.nav === pageId);
+      });
+
+      document.getElementById("pageTitle").textContent = pageTitles[pageId] || "PACKS";
+
+      if (pageId === "dashboard") {
+        renderDashboard();
+      } else if (pageId === "daily-log") {
+        renderDailyLog();
+      }
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function toggleSidebar(open) {
+      const sidebar = document.getElementById("sidebar");
+      const backdrop = document.getElementById("sidebarBackdrop");
+      if (open) {
+        sidebar.classList.add("open");
+        backdrop.classList.add("open");
+      } else {
+        sidebar.classList.remove("open");
+        backdrop.classList.remove("open");
+      }
+    }
+
+    // Initialize application
+    logDateInput.value = getTodayString();
+    loadHistory();
+    renderDashboard();
+    showPage("scan");
+  </script>
+</body>
+</html>
