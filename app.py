@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 from contextlib import contextmanager
 from flask import Flask, render_template, request, jsonify
+from werkzeug.exceptions import HTTPException
 from dotenv import load_dotenv
 from groq import (
     Groq,
@@ -33,7 +34,7 @@ app = Flask(__name__)
 # Request limit: 2MB max payload
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
-DATABASE = os.getenv("DATABASE_PATH", "database.db")
+DATABASE = os.path.abspath(os.path.join(os.path.dirname(__file__), os.getenv("DATABASE_PATH", "database.db")))
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 GROQ_TIMEOUT_SECONDS = float(os.getenv("GROQ_TIMEOUT_SECONDS", "30.0"))
 
@@ -47,7 +48,20 @@ def apply_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self' https://cdn.jsdelivr.net https://tessdata.projectnaptha.com;"
+    )
     return response
+
+
+@app.errorhandler(413)
+def request_entity_too_large(e):
+    return jsonify({"error": "Request payload exceeds 2MB limit"}), 413
 
 
 def get_groq_client():
@@ -212,6 +226,8 @@ def analyze():
             "result": analysis
         })
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Unhandled error in /api/analyze")
         return jsonify({"error": "An unexpected error occurred during analysis."}), 500
@@ -321,7 +337,7 @@ def health():
         "ocr": "Tesseract.js",
         "ai": "Groq",
         "groq_configured": groq_ready
-    })
+    }), (200 if db_ok else 503)
 
 
 # -----------------------------------

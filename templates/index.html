@@ -1840,7 +1840,11 @@
     }
 
     function setCalorieGoal(goal) {
-      localStorage.setItem("packs_calorie_goal", goal.toString());
+      try {
+        localStorage.setItem("packs_calorie_goal", goal.toString());
+      } catch (e) {
+        console.error("Storage error:", e);
+      }
     }
 
     function editCalorieGoal() {
@@ -1865,7 +1869,12 @@
     }
 
     function saveDailyLogs(logs) {
-      localStorage.setItem("packs_daily_logs", JSON.stringify(logs));
+      try {
+        localStorage.setItem("packs_daily_logs", JSON.stringify(logs));
+      } catch (e) {
+        console.error("Storage error:", e);
+        alert("Unable to save to local storage. Your storage may be full or disabled.");
+      }
     }
 
     function getTodayString() {
@@ -2508,6 +2517,13 @@ QUICK VERDICT:
     }
 
     async function openScan(id) {
+      showPage("report");
+      document.getElementById("reportEmptyState").style.display = "none";
+      document.getElementById("reportContent").style.display = "block";
+      document.getElementById("reportProductName").textContent = "Loading scan...";
+      document.getElementById("reportDate").textContent = "";
+      document.getElementById("reportVerdictText").textContent = "Retrieving saved analysis...";
+
       try {
         const resp = await fetch(`/api/history/${id}`);
         const data = await resp.json();
@@ -2516,9 +2532,9 @@ QUICK VERDICT:
         currentScan = data;
         ocrText.value = data.ocr_text || "";
         renderAnalysisReport(data);
-        showPage("report");
         toggleSidebar(false);
       } catch (err) {
+        document.getElementById("reportVerdictText").textContent = "Failed to load scan: " + err.message;
         alert(err.message);
       }
     }
@@ -2549,10 +2565,14 @@ QUICK VERDICT:
     async function handleChatSubmit(e) {
       e.preventDefault();
       const input = document.getElementById("chatInput");
+      const sendBtn = document.getElementById("chatSendBtn");
       const question = input.value.trim();
       if (!question) return;
 
       input.value = "";
+      input.disabled = true;
+      if (sendBtn) sendBtn.disabled = true;
+
       const chatMessages = document.getElementById("chatMessages");
 
       // Append user message bubble
@@ -2585,6 +2605,10 @@ QUICK VERDICT:
         loadingBubble.textContent = data.result || data.error || "I could not generate an answer at this time.";
       } catch (err) {
         loadingBubble.textContent = "Error communicating with AI: " + err.message;
+      } finally {
+        input.disabled = false;
+        if (sendBtn) sendBtn.disabled = false;
+        input.focus();
       }
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -2666,6 +2690,19 @@ QUICK VERDICT:
     }
 
     // Initialize application
+    const editModalEl = document.getElementById("editModalBackdrop");
+    if (editModalEl) {
+      editModalEl.addEventListener("click", function(e) {
+        if (e.target === this) closeEditModal();
+      });
+    }
+    const addToLogModalEl = document.getElementById("addToLogModalBackdrop");
+    if (addToLogModalEl) {
+      addToLogModalEl.addEventListener("click", function(e) {
+        if (e.target === this) closeAddToLogModal();
+      });
+    }
+
     logDateInput.value = getTodayString();
     loadHistory();
     renderDashboard();
