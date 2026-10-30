@@ -50,7 +50,7 @@
       min-height: 100vh;
     }
 
-    /* Left Sidebar (ChatGPT inspired) */
+    /* Left Sidebar */
     .sidebar {
       width: 260px;
       flex-shrink: 0;
@@ -361,7 +361,10 @@
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #22c55e;
+      background: #71717a;
+    }
+    .status-dot.active {
+      background: #ffffff;
     }
 
     /* Content Area */
@@ -481,7 +484,7 @@
       border-radius: var(--radius-sm);
     }
 
-    /* 1. New Scan Workspace Specifics */
+    /* New Scan Workspace */
     .scanner-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -623,7 +626,7 @@
       border-color: #52525b;
     }
 
-    /* 2. Analysis Report View (Opens automatically after scan or from history) */
+    /* Analysis Report View */
     .report-header-card {
       background: var(--surface-1);
       border: 1px solid var(--border);
@@ -634,6 +637,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
+      flex-wrap: wrap;
     }
 
     .report-product-name {
@@ -655,7 +659,7 @@
       gap: 8px;
     }
 
-    /* 7 Report Sections inside single report */
+    /* 7 Report Sections */
     .report-section {
       background: var(--surface-1);
       border: 1px solid var(--border);
@@ -772,13 +776,13 @@
     }
 
     details.expandable-section summary::after {
-      content: "＋";
+      content: "+";
       font-size: 14px;
       color: var(--text-muted);
     }
 
     details.expandable-section[open] summary::after {
-      content: "－";
+      content: "-";
     }
 
     .expandable-content {
@@ -794,7 +798,7 @@
       overflow-y: auto;
     }
 
-    /* 3. Dashboard View */
+    /* Dashboard View */
     .dashboard-progress-card {
       background: var(--surface-1);
       border: 1px solid var(--border);
@@ -915,7 +919,7 @@
       background: var(--surface-hover);
     }
 
-    /* 4. Daily Log View */
+    /* Daily Log View */
     .log-controls-card {
       background: var(--surface-1);
       border: 1px solid var(--border);
@@ -955,7 +959,7 @@
 
     .manual-grid {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr 1fr 1fr;
       gap: 10px;
       align-items: end;
     }
@@ -985,7 +989,66 @@
       border-color: #52525b;
     }
 
-    /* 5. AI Assistant View */
+    /* Modal / Dialog */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 80;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .modal-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    /* AI Assistant View */
     .chat-container {
       background: var(--surface-1);
       border: 1px solid var(--border);
@@ -1207,7 +1270,7 @@
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(false)"></div>
 
   <div class="app-layout">
-    <!-- Final Consolidated Left Sidebar -->
+    <!-- Consolidated Left Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <div class="brand-title">
@@ -1249,7 +1312,7 @@
         <div class="history-section">
           <div class="nav-group-label">Recent History</div>
           <div id="historyList" class="nav-links">
-            <div class="history-empty">No scans yet.</div>
+            <div class="history-empty">Loading history...</div>
           </div>
         </div>
       </div>
@@ -1271,7 +1334,7 @@
         </div>
         <div class="topbar-actions">
           <div class="active-badge" id="activeScanIndicator">
-            <span class="status-dot"></span>
+            <span class="status-dot" id="statusDot"></span>
             <span id="activeScanLabel">Ready</span>
           </div>
         </div>
@@ -1304,7 +1367,7 @@
 
               <div class="progress-bar-wrap" id="progressBarWrap">
                 <div class="progress-meta">
-                  <span id="ocrStatusLabel">Recognizing text…</span>
+                  <span id="ocrStatusLabel">Recognizing text...</span>
                   <span id="ocrPercentLabel">0%</span>
                 </div>
                 <div class="progress-track">
@@ -1336,7 +1399,7 @@
           </div>
         </section>
 
-        <!-- 2. ANALYSIS REPORT (Single Consolidated Report View) -->
+        <!-- 2. ANALYSIS REPORT (Consolidated Report View) -->
         <section class="page-view" data-page="report">
           <div class="page-header">
             <h1 class="page-title">Analysis Report</h1>
@@ -1350,13 +1413,14 @@
           </div>
 
           <div id="reportContent" style="display: none;">
+            <!-- Report Section 1: Product Header -->
             <div class="report-header-card">
               <div>
                 <div class="report-product-name" id="reportProductName">Product Name</div>
                 <div class="report-meta-date" id="reportDate">—</div>
               </div>
               <div class="report-header-actions">
-                <button class="btn btn-primary btn-sm" onclick="addCurrentScanToDailyLog()">
+                <button class="btn btn-primary btn-sm" onclick="openAddToDailyLogModal()">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   <span>Add to Daily Log</span>
                 </button>
@@ -1367,7 +1431,7 @@
               </div>
             </div>
 
-            <!-- Report Section: Nutrition (Calories & Macros) -->
+            <!-- Report Section 2: Nutrition & Macros Grid -->
             <div class="report-section">
               <div class="report-section-title">
                 <span>Nutrition & Macronutrients</span>
@@ -1408,7 +1472,7 @@
               </div>
             </div>
 
-            <!-- Report Section: Ingredients -->
+            <!-- Report Section 3: Ingredients -->
             <div class="report-section">
               <div class="report-section-title">
                 <span>Ingredients</span>
@@ -1418,7 +1482,7 @@
               </ul>
             </div>
 
-            <!-- Report Section: Additives -->
+            <!-- Report Section 4: Additives -->
             <div class="report-section">
               <div class="report-section-title">
                 <span>Additives</span>
@@ -1428,7 +1492,7 @@
               </ul>
             </div>
 
-            <!-- Report Section: Good Points -->
+            <!-- Report Section 5: Good Points -->
             <div class="report-section">
               <div class="report-section-title">
                 <span>Good Points</span>
@@ -1438,7 +1502,7 @@
               </ul>
             </div>
 
-            <!-- Report Section: Things to Watch -->
+            <!-- Report Section 6: Things to Watch -->
             <div class="report-section">
               <div class="report-section-title">
                 <span>Things to Watch</span>
@@ -1448,7 +1512,7 @@
               </ul>
             </div>
 
-            <!-- Report Section: Quick Verdict -->
+            <!-- Report Section 7: Quick Verdict -->
             <div class="report-section">
               <div class="report-section-title">
                 <span>Quick Verdict</span>
@@ -1557,19 +1621,27 @@
               <div class="manual-grid">
                 <div class="field-group">
                   <label>Food Name</label>
-                  <input type="text" id="manualName" class="text-input" placeholder="e.g. Greek Yogurt" required>
+                  <input type="text" id="manualName" class="text-input" placeholder="e.g. Oatmeal" required>
                 </div>
                 <div class="field-group">
                   <label>Quantity</label>
-                  <input type="text" id="manualQty" class="text-input" placeholder="1 serving" value="1 serving">
+                  <input type="text" id="manualQty" class="text-input" placeholder="1 bowl" value="1 serving">
                 </div>
                 <div class="field-group">
                   <label>Calories</label>
-                  <input type="number" id="manualCal" class="text-input" placeholder="120" required>
+                  <input type="number" id="manualCal" class="text-input" placeholder="150" required min="0" step="1">
                 </div>
                 <div class="field-group">
                   <label>Protein (g)</label>
-                  <input type="number" id="manualProt" class="text-input" placeholder="15" step="0.5">
+                  <input type="number" id="manualProt" class="text-input" placeholder="5" min="0" step="0.5">
+                </div>
+                <div class="field-group">
+                  <label>Carbs (g)</label>
+                  <input type="number" id="manualCarb" class="text-input" placeholder="27" min="0" step="0.5">
+                </div>
+                <div class="field-group">
+                  <label>Fat (g)</label>
+                  <input type="number" id="manualFat" class="text-input" placeholder="3" min="0" step="0.5">
                 </div>
                 <div class="field-group">
                   <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; height: 35px;">Add Entry</button>
@@ -1589,7 +1661,7 @@
               <strong id="logDailyProt">0g</strong>
             </div>
             <div class="metric-card">
-              <small>Daily Carbs / Fat</small>
+              <small>Daily Carbs & Fat</small>
               <strong style="font-size: 15px;" id="logDailyCarbFat">0g C · 0g F</strong>
             </div>
           </div>
@@ -1602,8 +1674,8 @@
                   <th>Food Item</th>
                   <th>Quantity</th>
                   <th>Calories</th>
-                  <th>Macros (P/C/F)</th>
-                  <th style="text-align: right;">Action</th>
+                  <th>Macros (P / C / F)</th>
+                  <th style="text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="logTableBody">
@@ -1619,7 +1691,7 @@
         <section class="page-view" data-page="assistant">
           <div class="page-header">
             <h1 class="page-title">AI Assistant</h1>
-            <p class="page-subtitle">Ask questions about food labels, ingredients, or dietary science.</p>
+            <p class="page-subtitle">Ask questions about food labels, ingredients, or dietary facts.</p>
           </div>
 
           <div class="chat-container">
@@ -1629,7 +1701,7 @@
               </div>
             </div>
             <form class="chat-input-bar" onsubmit="handleChatSubmit(event)">
-              <input type="text" id="chatInput" class="chat-input" placeholder="Ask a question about your food label…" autocomplete="off">
+              <input type="text" id="chatInput" class="chat-input" placeholder="Ask a question about your food label..." autocomplete="off">
               <button type="submit" class="btn btn-primary" id="chatSendBtn">Send</button>
             </form>
           </div>
@@ -1638,7 +1710,7 @@
     </main>
   </div>
 
-  <!-- Mobile Bottom Navigation (4 Core Views) -->
+  <!-- Mobile Bottom Navigation -->
   <nav class="mobile-bottom-nav">
     <button class="mobile-nav-btn active" data-nav="scan" onclick="showPage('scan')">
       <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
@@ -1658,12 +1730,104 @@
     </button>
   </nav>
 
+  <!-- Edit Food Entry Modal -->
+  <div class="modal-backdrop" id="editModalBackdrop">
+    <div class="modal-card">
+      <div class="modal-title">Edit Food Entry</div>
+      <div class="modal-sub">Update consumption quantity or nutrition numbers.</div>
+      <form onsubmit="handleSaveEditEntry(event)" class="modal-form">
+        <input type="hidden" id="editEntryId">
+        <input type="hidden" id="editEntryDate">
+        <div class="field-group">
+          <label>Food Name</label>
+          <input type="text" id="editName" class="text-input" required>
+        </div>
+        <div class="field-group">
+          <label>Quantity / Serving</label>
+          <input type="text" id="editQty" class="text-input" required>
+        </div>
+        <div class="modal-form-row">
+          <div class="field-group">
+            <label>Calories (kcal)</label>
+            <input type="number" id="editCal" class="text-input" required min="0" step="1">
+          </div>
+          <div class="field-group">
+            <label>Protein (g)</label>
+            <input type="number" id="editProt" class="text-input" min="0" step="0.5">
+          </div>
+        </div>
+        <div class="modal-form-row">
+          <div class="field-group">
+            <label>Carbohydrates (g)</label>
+            <input type="number" id="editCarb" class="text-input" min="0" step="0.5">
+          </div>
+          <div class="field-group">
+            <label>Fat (g)</label>
+            <input type="number" id="editFat" class="text-input" min="0" step="0.5">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add to Daily Log Modal (from Report) -->
+  <div class="modal-backdrop" id="addToLogModalBackdrop">
+    <div class="modal-card">
+      <div class="modal-title">Add to Daily Log</div>
+      <div class="modal-sub">Confirm quantity and date for this product.</div>
+      <form onsubmit="handleConfirmAddToDailyLog(event)" class="modal-form">
+        <div class="field-group">
+          <label>Food Item</label>
+          <input type="text" id="addReportName" class="text-input" required>
+        </div>
+        <div class="modal-form-row">
+          <div class="field-group">
+            <label>Serving / Quantity</label>
+            <input type="text" id="addReportQty" class="text-input" value="1 serving" required>
+          </div>
+          <div class="field-group">
+            <label>Date</label>
+            <input type="date" id="addReportDate" class="text-input" required>
+          </div>
+        </div>
+        <div class="modal-form-row">
+          <div class="field-group">
+            <label>Calories (kcal)</label>
+            <input type="number" id="addReportCal" class="text-input" min="0" step="1">
+          </div>
+          <div class="field-group">
+            <label>Protein (g)</label>
+            <input type="number" id="addReportProt" class="text-input" min="0" step="0.5">
+          </div>
+        </div>
+        <div class="modal-form-row">
+          <div class="field-group">
+            <label>Carbs (g)</label>
+            <input type="number" id="addReportCarb" class="text-input" min="0" step="0.5">
+          </div>
+          <div class="field-group">
+            <label>Fat (g)</label>
+            <input type="number" id="addReportFat" class="text-input" min="0" step="0.5">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeAddToLogModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add to Log</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div class="toast" id="toastNotification">Action complete</div>
 
   <script>
     // =============================================
-    // APPLICATION STATE & STORAGE
+    // STATE & STORAGE
     // =============================================
     let selectedFile = null;
     let currentScan = null;
@@ -1685,6 +1849,7 @@
       if (entered && !isNaN(entered) && parseInt(entered, 10) > 0) {
         setCalorieGoal(parseInt(entered, 10));
         renderDashboard();
+        showToast("Goal updated");
       }
     }
 
@@ -1755,6 +1920,8 @@
       const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (file && file.type.startsWith("image/")) {
         handleFileSelection(file);
+      } else {
+        alert("Please drop a valid image file (PNG, JPG, WEBP).");
       }
     });
 
@@ -1771,7 +1938,7 @@
       }
       imagePreview.src = URL.createObjectURL(file);
       previewContainer.style.display = "block";
-      ocrStatusText.textContent = "Image selected. Extracting text via OCR…";
+      ocrStatusText.textContent = "Image selected. Extracting text via OCR...";
       runOcr();
     }
 
@@ -1782,7 +1949,7 @@
       progressBarWrap.style.display = "block";
       ocrProgressFill.style.width = "0%";
       ocrPercentLabel.textContent = "0%";
-      ocrStatusLabel.textContent = "Starting OCR…";
+      ocrStatusLabel.textContent = "Initializing OCR...";
 
       try {
         const result = await Tesseract.recognize(
@@ -1846,15 +2013,15 @@
       const productName = firstLine.substring(0, 48);
 
       analyseBtn.disabled = true;
-      analyseBtn.textContent = "Analyzing…";
+      analyseBtn.textContent = "Analyzing...";
 
-      // Automatically open the Analysis Report page
+      // Automatically open Analysis Report view
       showPage("report");
       document.getElementById("reportEmptyState").style.display = "none";
       document.getElementById("reportContent").style.display = "block";
       document.getElementById("reportProductName").textContent = productName;
-      document.getElementById("reportDate").textContent = "Analyzing in progress…";
-      document.getElementById("reportVerdictText").textContent = "Evaluating ingredients, nutrition facts, and additives…";
+      document.getElementById("reportDate").textContent = "Analyzing in progress...";
+      document.getElementById("reportVerdictText").textContent = "PACKS AI is evaluating nutrients, ingredients, and additives...";
 
       try {
         const response = await fetch("/api/analyze", {
@@ -1918,7 +2085,7 @@ QUICK VERDICT:
     }
 
     // =============================================
-    // PARSE & RENDER ANALYSIS REPORT (One Consolidated Report)
+    // PARSE & RENDER ANALYSIS REPORT (7 Sections)
     // =============================================
     function parseAiAnalysis(rawText) {
       const result = {
@@ -2005,11 +2172,11 @@ QUICK VERDICT:
       document.getElementById("macroFiber").textContent = findMacro(["fiber", "fibre"]);
       document.getElementById("macroSodium").textContent = findMacro(["sodium", "salt"]);
 
-      // Helper for bullet lists
+      // Helper for safe list rendering
       const renderList = (elemId, items, emptyText) => {
         const el = document.getElementById(elemId);
         if (!items || items.length === 0) {
-          el.innerHTML = `<li class="report-list-item"><span class="bullet-point"></span><span>${emptyText}</span></li>`;
+          el.innerHTML = `<li class="report-list-item"><span class="bullet-point"></span><span>${escapeHtml(emptyText)}</span></li>`;
         } else {
           el.innerHTML = items.map(it => `
             <li class="report-list-item">
@@ -2038,16 +2205,17 @@ QUICK VERDICT:
 
       // Topbar active scan indicator
       document.getElementById("activeScanLabel").textContent = scan.product_name;
+      const dot = document.getElementById("statusDot");
+      if (dot) dot.classList.add("active");
     }
 
     // =============================================
-    // ADD FROM REPORT TO DAILY LOG
+    // ADD TO DAILY LOG (From Report)
     // =============================================
-    function addCurrentScanToDailyLog() {
+    function openAddToDailyLogModal() {
       if (!currentScan) return;
       const parsed = currentScan._parsed || parseAiAnalysis(currentScan.ai_analysis);
 
-      // Extract numerical values
       const parseNum = (terms) => {
         for (let t of terms) {
           for (let k in parsed.nutrition) {
@@ -2060,36 +2228,59 @@ QUICK VERDICT:
         return 0;
       };
 
-      const cals = parseNum(["calorie", "energy"]);
-      const prot = parseNum(["protein"]);
-      const carbs = parseNum(["carb"]);
-      const fat = parseNum(["fat"]);
+      document.getElementById("addReportName").value = currentScan.product_name || "Food Item";
+      document.getElementById("addReportQty").value = "1 serving";
+      document.getElementById("addReportDate").value = logDateInput.value || getTodayString();
+      document.getElementById("addReportCal").value = parseNum(["calorie", "energy"]) || "";
+      document.getElementById("addReportProt").value = parseNum(["protein"]) || "";
+      document.getElementById("addReportCarb").value = parseNum(["carb"]) || "";
+      document.getElementById("addReportFat").value = parseNum(["fat"]) || "";
 
-      const today = getTodayString();
+      document.getElementById("addToLogModalBackdrop").classList.add("open");
+    }
+
+    function closeAddToLogModal() {
+      document.getElementById("addToLogModalBackdrop").classList.remove("open");
+    }
+
+    function handleConfirmAddToDailyLog(e) {
+      e.preventDefault();
+      const name = document.getElementById("addReportName").value.trim() || "Food Item";
+      const qty = document.getElementById("addReportQty").value.trim() || "1 serving";
+      const targetDate = document.getElementById("addReportDate").value || getTodayString();
+      const cal = parseFloat(document.getElementById("addReportCal").value) || 0;
+      const prot = parseFloat(document.getElementById("addReportProt").value) || 0;
+      const carb = parseFloat(document.getElementById("addReportCarb").value) || 0;
+      const fat = parseFloat(document.getElementById("addReportFat").value) || 0;
+
       const logs = getDailyLogs();
-      if (!logs[today]) logs[today] = [];
+      if (!logs[targetDate]) logs[targetDate] = [];
 
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      logs[today].unshift({
+      logs[targetDate].unshift({
         id: Date.now().toString(),
-        name: currentScan.product_name || "Food Item",
-        qty: "1 serving",
-        cal: cals,
+        name: name,
+        qty: qty,
+        cal: cal,
         prot: prot,
-        carb: carbs,
+        carb: carb,
         fat: fat,
         time: timeStr
       });
 
       saveDailyLogs(logs);
-      showToast(`Added ${currentScan.product_name} to Daily Log`);
+      closeAddToLogModal();
+      showToast(`Added ${name} to Daily Log (${targetDate})`);
       renderDashboard();
+      if (logDateInput.value === targetDate) {
+        renderDailyLog();
+      }
     }
 
     // =============================================
-    // DASHBOARD & DAILY LOG RENDERING
+    // DASHBOARD & DAILY LOG (Actual Data Only)
     // =============================================
     function renderDashboard() {
       const today = getTodayString();
@@ -2169,6 +2360,7 @@ QUICK VERDICT:
             <td>${Math.round(e.cal)} kcal</td>
             <td style="color: var(--text-muted); font-size: 12px;">${Math.round(e.prot || 0)}g P / ${Math.round(e.carb || 0)}g C / ${Math.round(e.fat || 0)}g F</td>
             <td style="text-align: right;">
+              <button class="btn btn-secondary btn-sm" onclick="openEditModal('${selectedDate}', '${e.id}')" style="margin-right: 6px;">Edit</button>
               <button class="btn btn-secondary btn-sm" onclick="removeDailyLogEntry('${selectedDate}', '${e.id}')">Delete</button>
             </td>
           </tr>
@@ -2188,6 +2380,8 @@ QUICK VERDICT:
       const qty = document.getElementById("manualQty").value.trim() || "1 serving";
       const cal = parseFloat(document.getElementById("manualCal").value) || 0;
       const prot = parseFloat(document.getElementById("manualProt").value) || 0;
+      const carb = parseFloat(document.getElementById("manualCarb").value) || 0;
+      const fat = parseFloat(document.getElementById("manualFat").value) || 0;
 
       if (!name) return;
 
@@ -2203,15 +2397,18 @@ QUICK VERDICT:
         qty: qty,
         cal: cal,
         prot: prot,
-        carb: 0,
-        fat: 0,
+        carb: carb,
+        fat: fat,
         time: timeStr
       });
 
       saveDailyLogs(logs);
       document.getElementById("manualName").value = "";
+      document.getElementById("manualQty").value = "1 serving";
       document.getElementById("manualCal").value = "";
       document.getElementById("manualProt").value = "";
+      document.getElementById("manualCarb").value = "";
+      document.getElementById("manualFat").value = "";
       toggleManualEntryPanel();
       renderDailyLog();
       renderDashboard();
@@ -2226,6 +2423,58 @@ QUICK VERDICT:
         renderDailyLog();
         renderDashboard();
         showToast("Entry removed");
+      }
+    }
+
+    // Edit Log Entry Modal
+    function openEditModal(date, id) {
+      const logs = getDailyLogs();
+      const entry = (logs[date] || []).find(it => it.id === id);
+      if (!entry) return;
+
+      document.getElementById("editEntryId").value = entry.id;
+      document.getElementById("editEntryDate").value = date;
+      document.getElementById("editName").value = entry.name;
+      document.getElementById("editQty").value = entry.qty || "1 serving";
+      document.getElementById("editCal").value = entry.cal || 0;
+      document.getElementById("editProt").value = entry.prot || 0;
+      document.getElementById("editCarb").value = entry.carb || 0;
+      document.getElementById("editFat").value = entry.fat || 0;
+
+      document.getElementById("editModalBackdrop").classList.add("open");
+    }
+
+    function closeEditModal() {
+      document.getElementById("editModalBackdrop").classList.remove("open");
+    }
+
+    function handleSaveEditEntry(e) {
+      e.preventDefault();
+      const date = document.getElementById("editEntryDate").value;
+      const id = document.getElementById("editEntryId").value;
+      const name = document.getElementById("editName").value.trim();
+      const qty = document.getElementById("editQty").value.trim() || "1 serving";
+      const cal = parseFloat(document.getElementById("editCal").value) || 0;
+      const prot = parseFloat(document.getElementById("editProt").value) || 0;
+      const carb = parseFloat(document.getElementById("editCarb").value) || 0;
+      const fat = parseFloat(document.getElementById("editFat").value) || 0;
+
+      const logs = getDailyLogs();
+      if (logs[date]) {
+        const item = logs[date].find(it => it.id === id);
+        if (item) {
+          item.name = name;
+          item.qty = qty;
+          item.cal = cal;
+          item.prot = prot;
+          item.carb = carb;
+          item.fat = fat;
+          saveDailyLogs(logs);
+          closeEditModal();
+          renderDailyLog();
+          renderDashboard();
+          showToast("Entry updated");
+        }
       }
     }
 
@@ -2254,6 +2503,7 @@ QUICK VERDICT:
         }
       } catch (err) {
         console.error("Failed to load history:", err);
+        historyList.innerHTML = `<div class="history-empty">Failed to load history.</div>`;
       }
     }
 
@@ -2283,15 +2533,18 @@ QUICK VERDICT:
           document.getElementById("reportContent").style.display = "none";
           document.getElementById("reportEmptyState").style.display = "block";
           document.getElementById("activeScanLabel").textContent = "Ready";
+          const dot = document.getElementById("statusDot");
+          if (dot) dot.classList.remove("active");
         }
         loadHistory();
+        showToast("Scan deleted");
       } catch (err) {
         alert(err.message);
       }
     }
 
     // =============================================
-    // AI ASSISTANT CHAT
+    // AI ASSISTANT CHAT (Uses supported /api/analyze)
     // =============================================
     async function handleChatSubmit(e) {
       e.preventDefault();
@@ -2302,7 +2555,7 @@ QUICK VERDICT:
       input.value = "";
       const chatMessages = document.getElementById("chatMessages");
 
-      // Append user bubble
+      // Append user message bubble
       const userBubble = document.createElement("div");
       userBubble.className = "chat-bubble user";
       userBubble.textContent = question;
@@ -2311,7 +2564,7 @@ QUICK VERDICT:
       // Loading bubble
       const loadingBubble = document.createElement("div");
       loadingBubble.className = "chat-bubble assistant";
-      loadingBubble.textContent = "Consulting nutrition knowledge base…";
+      loadingBubble.textContent = "Consulting nutrition knowledge base...";
       chatMessages.appendChild(loadingBubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -2329,7 +2582,7 @@ QUICK VERDICT:
         });
 
         const data = await resp.json();
-        loadingBubble.textContent = data.result || "I could not generate an answer at this time.";
+        loadingBubble.textContent = data.result || data.error || "I could not generate an answer at this time.";
       } catch (err) {
         loadingBubble.textContent = "Error communicating with AI: " + err.message;
       }
