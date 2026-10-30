@@ -47,6 +47,10 @@ $RECYCLE.BIN/
 *.log
 logs/
 
+# Uploads and temporary media
+uploads/
+**/uploads/
+
 # IDE & Editor caches
 .idea/
 .vscode/
