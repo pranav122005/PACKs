@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#09090b">
   <title>PACKS — Food Label Intelligence</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <style>
     :root {
       --bg: #09090b;
@@ -273,6 +275,303 @@
       padding: 10px;
       font-size: 11px;
       color: var(--text-muted);
+    }
+
+    .sidebar-auth {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .auth-status-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .auth-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #71717a;
+      flex-shrink: 0;
+    }
+
+    .auth-status-dot.active {
+      background: #22c55e;
+    }
+
+    .auth-user-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 105px;
+    }
+
+    /* Authentication & Account View */
+    .auth-page-container {
+      max-width: 480px;
+      margin: 10px auto 40px;
+    }
+
+    .auth-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px 24px;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .auth-header-icon {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-primary);
+    }
+
+    .auth-header-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .auth-header-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 16px;
+      background: #ffffff;
+      color: #1f1f1f;
+      border: 1px solid #d1d5db;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn-google:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      margin: 18px 0;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .auth-divider span {
+      padding: 0 10px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 18px;
+      gap: 4px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+      font-weight: 500;
+    }
+
+    .auth-tab:hover {
+      color: var(--text-secondary);
+    }
+
+    .auth-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--text-primary);
+    }
+
+    .password-field-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-field-wrap input {
+      padding-right: 38px;
+    }
+
+    .btn-toggle-eye {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+
+    .btn-toggle-eye:hover {
+      color: var(--text-primary);
+    }
+
+    .btn-toggle-eye svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .auth-alert {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      margin-bottom: 16px;
+      display: none;
+      line-height: 1.45;
+    }
+
+    .auth-alert.error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .auth-alert.success {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #86efac;
+    }
+
+    .auth-alert.info {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #93c5fd;
+    }
+
+    .profile-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+    }
+
+    .profile-user-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .profile-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .profile-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .profile-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .profile-email {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .profile-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 500;
+      margin-top: 5px;
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .profile-badge.guest {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.3);
     }
 
     .sidebar-footer {
@@ -1306,6 +1605,10 @@
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             <span>Daily Log</span>
           </a>
+          <a class="nav-item" data-nav="account" onclick="showPage('account'); toggleSidebar(false);">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>Account</span>
+          </a>
         </nav>
 
         <!-- Recent History below Main Navigation -->
@@ -1315,6 +1618,14 @@
             <div class="history-empty">Loading history...</div>
           </div>
         </div>
+      </div>
+
+      <div class="sidebar-auth" id="sidebarAuth" onclick="showPage('account'); toggleSidebar(false);" style="cursor: pointer;">
+        <div class="auth-status-wrap">
+          <span class="auth-status-dot" id="authStatusDot"></span>
+          <span class="auth-user-label" id="authUserLabel">Guest</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); showPage('account'); toggleSidebar(false);" style="padding: 4px 8px; font-size: 11px;">Account</button>
       </div>
 
       <div class="sidebar-footer">
@@ -1337,6 +1648,9 @@
             <span class="status-dot" id="statusDot"></span>
             <span id="activeScanLabel">Ready</span>
           </div>
+          <button class="btn btn-secondary btn-sm" onclick="openAuthModal()" id="topbarAuthBtn" style="padding: 4px 10px; font-size: 11px; margin-left: 8px;">
+            <span id="topbarAuthLabel">Guest</span>
+          </button>
         </div>
       </header>
 
@@ -1706,6 +2020,168 @@
             </form>
           </div>
         </section>
+
+        <!-- 6. ACCOUNT & AUTHENTICATION -->
+        <section class="page-view" data-page="account">
+          <div class="page-header">
+            <h1 class="page-title">Account & Synchronization</h1>
+            <p class="page-subtitle">Manage authentication, synchronize scans to Cloud Firestore, and configure account security.</p>
+          </div>
+
+          <div class="auth-page-container">
+            <!-- Alert notifications -->
+            <div id="authAlertError" class="auth-alert error"></div>
+            <div id="authAlertSuccess" class="auth-alert success"></div>
+            <div id="authAlertInfo" class="auth-alert info"></div>
+
+            <!-- Profile View (shown when signed in with permanent account or guest session) -->
+            <div id="authProfileView" class="profile-card" style="display: none;">
+              <div class="profile-user-row">
+                <div class="profile-avatar" id="profileAvatar">
+                  <span id="profileAvatarInitial">U</span>
+                </div>
+                <div class="profile-info">
+                  <div class="profile-name" id="profileDisplayName">User Name</div>
+                  <div class="profile-email" id="profileEmail">user@example.com</div>
+                  <span class="profile-badge" id="profileBadge">Verified Account</span>
+                </div>
+              </div>
+
+              <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 18px; font-size: 12px;">
+                <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em;">Isolated Cloud Database Tenant</div>
+                <div style="font-family: monospace; font-size: 11px; color: var(--text-secondary); word-break: break-all;" id="profileUidText">users/.../scans</div>
+              </div>
+
+              <!-- Guest account linking section (visible when anonymous) -->
+              <div id="guestLinkingBox" style="display: none; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 18px;">
+                <div style="font-size: 13px; font-weight: 600; color: #fbbf24; margin-bottom: 4px;">Link Guest Session</div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+                  You are currently using an anonymous guest session. Link this session to Google or an email account to preserve your existing scan history permanently across devices.
+                </div>
+                <button type="button" class="btn-google" onclick="handleGoogleAuth()" style="margin-bottom: 10px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>Link with Google</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="switchAuthView('signup')" style="width: 100%;">
+                  Link with Email & Password
+                </button>
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 18px;">
+                <button type="button" class="btn btn-secondary" onclick="showPage('scan')" style="flex: 1;">
+                  Start New Scan
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="handleSignOutUser()" style="flex: 1; border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
+                  Sign Out
+                </button>
+              </div>
+            </div>
+
+            <!-- Authentication Card (Login / Register / Reset) -->
+            <div id="authFormsCard" class="auth-card">
+              <div class="auth-header">
+                <div class="auth-header-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <div class="auth-header-title" id="authFormTitle">Sign In to PACKS</div>
+                <div class="auth-header-sub" id="authFormSub">Access your private nutrition history and synchronize scans across devices.</div>
+              </div>
+
+              <!-- Google Sign In Button -->
+              <button type="button" class="btn-google" id="btnGoogleAuth" onclick="handleGoogleAuth()">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              <div class="auth-divider">
+                <span>or continue with email</span>
+              </div>
+
+              <!-- Auth Tabs -->
+              <div class="auth-tabs">
+                <div class="auth-tab active" id="tabSignIn" onclick="switchAuthView('signin')">Sign In</div>
+                <div class="auth-tab" id="tabSignUp" onclick="switchAuthView('signup')">Create Account</div>
+                <div class="auth-tab" id="tabReset" onclick="switchAuthView('reset')">Reset Password</div>
+              </div>
+
+              <!-- 1. SIGN IN FORM -->
+              <form id="signInForm" onsubmit="handleEmailSignIn(event)">
+                <div class="field-group">
+                  <label for="signInEmail">Email Address</label>
+                  <input type="email" id="signInEmail" class="text-input" placeholder="name@example.com" autocomplete="email" required>
+                </div>
+                <div class="field-group">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label for="signInPassword" style="margin-bottom: 0;">Password</label>
+                    <a href="javascript:void(0)" onclick="switchAuthView('reset')" style="font-size: 11px; color: var(--text-muted); text-decoration: underline;">Forgot password?</a>
+                  </div>
+                  <div class="password-field-wrap">
+                    <input type="password" id="signInPassword" class="text-input" placeholder="••••••••" autocomplete="current-password" required>
+                    <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('signInPassword', this)" title="Show/Hide Password">
+                      <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="btnSignInSubmit" style="width: 100%; margin-top: 14px;">Sign In</button>
+              </form>
+
+              <!-- 2. CREATE ACCOUNT FORM -->
+              <form id="signUpForm" onsubmit="handleEmailSignUp(event)" style="display: none;">
+                <div class="field-group">
+                  <label for="signUpEmail">Email Address</label>
+                  <input type="email" id="signUpEmail" class="text-input" placeholder="name@example.com" autocomplete="email" required>
+                </div>
+                <div class="field-group">
+                  <label for="signUpPassword">Password (min 6 characters)</label>
+                  <div class="password-field-wrap">
+                    <input type="password" id="signUpPassword" class="text-input" placeholder="••••••••" autocomplete="new-password" required minlength="6">
+                    <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('signUpPassword', this)" title="Show/Hide Password">
+                      <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label for="signUpConfirmPassword">Confirm Password</label>
+                  <div class="password-field-wrap">
+                    <input type="password" id="signUpConfirmPassword" class="text-input" placeholder="••••••••" autocomplete="new-password" required minlength="6">
+                    <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('signUpConfirmPassword', this)" title="Show/Hide Password">
+                      <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="btnSignUpSubmit" style="width: 100%; margin-top: 14px;">Create Account</button>
+              </form>
+
+              <!-- 3. RESET PASSWORD FORM -->
+              <form id="resetForm" onsubmit="handlePasswordReset(event)" style="display: none;">
+                <div class="field-group">
+                  <label for="resetEmail">Email Address</label>
+                  <input type="email" id="resetEmail" class="text-input" placeholder="name@example.com" autocomplete="email" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="btnResetSubmit" style="width: 100%; margin-top: 14px;">Send Reset Link</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="switchAuthView('signin')" style="width: 100%; margin-top: 8px;">Back to Sign In</button>
+              </form>
+
+              <!-- Guest Access Action -->
+              <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); text-align: center;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Want to scan without signing in?</div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="handleContinueAsGuest()" style="width: 100%;">
+                  Continue as Guest →
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -1819,6 +2295,41 @@
           <button type="submit" class="btn btn-primary btn-sm">Add to Log</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Firebase Auth & Account Modal -->
+  <div class="modal-backdrop" id="authModalBackdrop">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-title">Account & Synchronization</div>
+      <div class="modal-sub">Scans are isolated to your private account in Google Cloud Firestore.</div>
+
+      <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px; font-size: 12px;">
+        <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em;">Current Session</div>
+        <div style="font-weight: 500; word-break: break-all;" id="authModalStatusText">Initializing guest session...</div>
+        <div style="color: var(--text-muted); font-size: 11px; margin-top: 4px;" id="authModalUidText"></div>
+      </div>
+
+      <form id="authEmailForm" onsubmit="handleEmailAuth(event)">
+        <div class="field-group">
+          <label>Email Address</label>
+          <input type="email" id="authEmailInput" class="text-input" placeholder="user@example.com" autocomplete="email">
+        </div>
+        <div class="field-group">
+          <label>Password</label>
+          <input type="password" id="authPasswordInput" class="text-input" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div id="authErrorMessage" style="color: #ef4444; font-size: 12px; margin-top: 6px; display: none;"></div>
+        <div style="display: flex; gap: 8px; margin-top: 14px;">
+          <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;" id="authSignInBtn">Sign In</button>
+          <button type="button" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="handleRegisterAccount()">Register / Link</button>
+        </div>
+      </form>
+
+      <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="handleSignOutUser()" id="authSignOutBtn" style="font-size: 11px;">New Guest Session</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeAuthModal()" style="font-size: 11px;">Close</button>
+      </div>
     </div>
   </div>
 
@@ -2033,9 +2544,10 @@
       document.getElementById("reportVerdictText").textContent = "PACKS AI is evaluating nutrients, ingredients, and additives...";
 
       try {
+        const headers = await getAuthHeaders();
         const response = await fetch("/api/analyze", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: headers,
           body: JSON.stringify({
             product_name: productName,
             text: text,
@@ -2488,23 +3000,28 @@ QUICK VERDICT:
     }
 
     // =============================================
-    // SCAN HISTORY (SQLite Backend)
+    // SCAN HISTORY (User-Isolated Firestore Backend)
     // =============================================
     async function loadHistory() {
       try {
-        const resp = await fetch("/api/history");
+        const headers = await getAuthHeaders();
+        const resp = await fetch("/api/history", { headers });
+        if (resp.status === 401) {
+          historyList.innerHTML = `<div class="history-empty">Sign in or continue as guest to view scan history.</div>`;
+          return;
+        }
         scansHistory = await resp.json();
 
         if (!scansHistory || scansHistory.length === 0) {
           historyList.innerHTML = `<div class="history-empty">No scans yet.</div>`;
         } else {
           historyList.innerHTML = scansHistory.map(s => `
-            <div class="history-item" onclick="openScan(${s.id})">
+            <div class="history-item" onclick="openScan('${escapeHtml(s.id)}')">
               <div class="history-info">
                 <div class="history-title">${escapeHtml(s.product_name || "Food Scan")}</div>
                 <div class="history-date">${formatShortDate(s.created_at)}</div>
               </div>
-              <button class="history-delete" onclick="event.stopPropagation(); deleteScan(${s.id})" title="Delete scan">
+              <button class="history-delete" onclick="event.stopPropagation(); deleteScan('${escapeHtml(s.id)}')" title="Delete scan">
                 <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             </div>
@@ -2525,7 +3042,8 @@ QUICK VERDICT:
       document.getElementById("reportVerdictText").textContent = "Retrieving saved analysis...";
 
       try {
-        const resp = await fetch(`/api/history/${id}`);
+        const headers = await getAuthHeaders();
+        const resp = await fetch(`/api/history/${id}`, { headers });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Failed to load scan");
 
@@ -2542,7 +3060,8 @@ QUICK VERDICT:
     async function deleteScan(id) {
       if (!confirm("Delete this scan record?")) return;
       try {
-        const resp = await fetch(`/api/history/${id}`, { method: "DELETE" });
+        const headers = await getAuthHeaders();
+        const resp = await fetch(`/api/history/${id}`, { method: "DELETE", headers });
         if (!resp.ok) throw new Error("Delete failed");
         if (currentScan && currentScan.id === id) {
           currentScan = null;
@@ -2650,7 +3169,8 @@ QUICK VERDICT:
       report: "Analysis Report",
       dashboard: "Dashboard",
       assistant: "AI Assistant",
-      "daily-log": "Daily Log"
+      "daily-log": "Daily Log",
+      account: "Account & Synchronization"
     };
 
     function showPage(pageId) {
@@ -2672,6 +3192,8 @@ QUICK VERDICT:
         renderDashboard();
       } else if (pageId === "daily-log") {
         renderDailyLog();
+      } else if (pageId === "account") {
+        updateAuthUI(currentFirebaseUser);
       }
 
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2689,6 +3211,479 @@ QUICK VERDICT:
       }
     }
 
+    // =============================================
+    // FIREBASE AUTHENTICATION & COMPLETE USER MANAGEMENT
+    // =============================================
+    let currentFirebaseUser = null;
+    let firebaseAuthInitialized = false;
+
+    async function getAuthHeaders() {
+      const headers = { "Content-Type": "application/json" };
+      try {
+        if (currentFirebaseUser) {
+          const token = await currentFirebaseUser.getIdToken();
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to retrieve Firebase ID token:", err);
+      }
+      return headers;
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById("authAlertError");
+      if (el) {
+        el.textContent = msg;
+        el.style.display = "block";
+      }
+      const succ = document.getElementById("authAlertSuccess");
+      if (succ) succ.style.display = "none";
+      const info = document.getElementById("authAlertInfo");
+      if (info) info.style.display = "none";
+    }
+
+    function showAuthSuccess(msg) {
+      const el = document.getElementById("authAlertSuccess");
+      if (el) {
+        el.textContent = msg;
+        el.style.display = "block";
+      }
+      const err = document.getElementById("authAlertError");
+      if (err) err.style.display = "none";
+      const info = document.getElementById("authAlertInfo");
+      if (info) info.style.display = "none";
+    }
+
+    function showAuthInfo(msg) {
+      const el = document.getElementById("authAlertInfo");
+      if (el) {
+        el.textContent = msg;
+        el.style.display = "block";
+      }
+    }
+
+    function hideAuthAlerts() {
+      const err = document.getElementById("authAlertError");
+      if (err) err.style.display = "none";
+      const succ = document.getElementById("authAlertSuccess");
+      if (succ) succ.style.display = "none";
+      const info = document.getElementById("authAlertInfo");
+      if (info) info.style.display = "none";
+    }
+
+    function togglePasswordVisibility(inputId, btnEl) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      if (btnEl) {
+        btnEl.innerHTML = isPassword
+          ? `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`
+          : `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      }
+    }
+
+    function switchAuthView(view) {
+      hideAuthAlerts();
+      const tabSignIn = document.getElementById("tabSignIn");
+      const tabSignUp = document.getElementById("tabSignUp");
+      const tabReset = document.getElementById("tabReset");
+      const signInForm = document.getElementById("signInForm");
+      const signUpForm = document.getElementById("signUpForm");
+      const resetForm = document.getElementById("resetForm");
+      const formTitle = document.getElementById("authFormTitle");
+      const formSub = document.getElementById("authFormSub");
+
+      if (tabSignIn) tabSignIn.classList.toggle("active", view === "signin");
+      if (tabSignUp) tabSignUp.classList.toggle("active", view === "signup");
+      if (tabReset) tabReset.classList.toggle("active", view === "reset");
+
+      if (signInForm) signInForm.style.display = view === "signin" ? "block" : "none";
+      if (signUpForm) signUpForm.style.display = view === "signup" ? "block" : "none";
+      if (resetForm) resetForm.style.display = view === "reset" ? "block" : "none";
+
+      if (view === "signin") {
+        if (formTitle) formTitle.textContent = "Sign In to PACKS";
+        if (formSub) formSub.textContent = "Access your private nutrition history and synchronize scans across devices.";
+      } else if (view === "signup") {
+        if (formTitle) formTitle.textContent = "Create an Account";
+        if (formSub) {
+          if (currentFirebaseUser && currentFirebaseUser.isAnonymous) {
+            formSub.textContent = "Linking your guest session preserves all currently scanned food items.";
+          } else {
+            formSub.textContent = "Register a new private account for cloud-synchronized food scanning.";
+          }
+        }
+      } else if (view === "reset") {
+        if (formTitle) formTitle.textContent = "Reset Password";
+        if (formSub) formSub.textContent = "Enter your registered email to receive a password recovery link.";
+      }
+    }
+
+    function updateAuthUI(user) {
+      const statusDot = document.getElementById("authStatusDot");
+      const userLabel = document.getElementById("authUserLabel");
+      const topbarLabel = document.getElementById("topbarAuthLabel");
+      const modalStatus = document.getElementById("authModalStatusText");
+      const modalUid = document.getElementById("authModalUidText");
+      const errEl = document.getElementById("authErrorMessage");
+      if (errEl) {
+        errEl.style.display = "none";
+        errEl.textContent = "";
+      }
+
+      // Page elements
+      const profileView = document.getElementById("authProfileView");
+      const formsCard = document.getElementById("authFormsCard");
+      const guestBox = document.getElementById("guestLinkingBox");
+      const profileName = document.getElementById("profileDisplayName");
+      const profileEmail = document.getElementById("profileEmail");
+      const profileBadge = document.getElementById("profileBadge");
+      const profileUidText = document.getElementById("profileUidText");
+      const profileAvatar = document.getElementById("profileAvatar");
+
+      if (user) {
+        if (statusDot) statusDot.classList.add("active");
+        if (user.isAnonymous) {
+          const shortUid = user.uid.length > 8 ? user.uid.slice(0, 8) + "..." : user.uid;
+          if (userLabel) userLabel.textContent = `Guest (${shortUid})`;
+          if (topbarLabel) topbarLabel.textContent = "Guest";
+          if (modalStatus) modalStatus.textContent = "Anonymous Guest Session";
+          if (modalUid) modalUid.textContent = "Private Firestore UID: " + user.uid;
+
+          // Account View for Guest
+          if (profileView) profileView.style.display = "block";
+          if (formsCard) formsCard.style.display = "block";
+          if (guestBox) guestBox.style.display = "block";
+          if (profileName) profileName.textContent = "Anonymous Guest";
+          if (profileEmail) profileEmail.textContent = "Temporary cryptographic session";
+          if (profileBadge) {
+            profileBadge.textContent = "Guest Access";
+            profileBadge.className = "profile-badge guest";
+          }
+          if (profileUidText) profileUidText.textContent = `users/${user.uid}/scans`;
+          if (profileAvatar) profileAvatar.innerHTML = '<span id="profileAvatarInitial">?</span>';
+        } else {
+          // Permanent User
+          const email = user.email || "Authenticated User";
+          const displayName = user.displayName || (email.includes("@") ? email.split("@")[0] : email);
+          if (userLabel) userLabel.textContent = email;
+          if (topbarLabel) topbarLabel.textContent = displayName;
+          if (modalStatus) modalStatus.textContent = `Signed in as ${email}`;
+          if (modalUid) modalUid.textContent = "Private Firestore UID: " + user.uid;
+
+          // Account View for Permanent User
+          if (profileView) profileView.style.display = "block";
+          if (formsCard) formsCard.style.display = "none";
+          if (guestBox) guestBox.style.display = "none";
+          if (profileName) profileName.textContent = displayName;
+          if (profileEmail) profileEmail.textContent = email;
+          const isGoogle = user.providerData && user.providerData.some(p => p.providerId === "google.com");
+          if (profileBadge) {
+            profileBadge.textContent = isGoogle ? "Google Account" : "Email Verified";
+            profileBadge.className = "profile-badge";
+          }
+          if (profileUidText) profileUidText.textContent = `users/${user.uid}/scans`;
+          if (profileAvatar) {
+            if (user.photoURL) {
+              profileAvatar.innerHTML = `<img src="${user.photoURL}" alt="Avatar" class="profile-avatar-img">`;
+            } else {
+              const initial = displayName[0].toUpperCase();
+              profileAvatar.innerHTML = `<span id="profileAvatarInitial">${initial}</span>`;
+            }
+          }
+        }
+      } else {
+        // Offline / Unauthenticated
+        if (statusDot) statusDot.classList.remove("active");
+        if (userLabel) userLabel.textContent = "Offline / Unauthed";
+        if (topbarLabel) topbarLabel.textContent = "Sign In";
+        if (modalStatus) modalStatus.textContent = "Not authenticated";
+        if (modalUid) modalUid.textContent = "Scans will not be persisted to cloud history.";
+
+        if (profileView) profileView.style.display = "none";
+        if (formsCard) formsCard.style.display = "block";
+        if (guestBox) guestBox.style.display = "none";
+      }
+    }
+
+    async function initFirebaseAuth() {
+      if (firebaseAuthInitialized) return;
+      firebaseAuthInitialized = true;
+      try {
+        const resp = await fetch("/api/firebase-config");
+        if (!resp.ok) {
+          console.warn("Could not fetch Firebase configuration from /api/firebase-config");
+          loadHistory();
+          return;
+        }
+        const config = await resp.json();
+        if (!config.apiKey || config.apiKey === "replace_with_your_firebase_client_api_key") {
+          console.log("Firebase Client API Key is not configured in environment. Using unauthenticated fallback.");
+          updateAuthUI(null);
+          loadHistory();
+          return;
+        }
+
+        if (!window.firebase) {
+          console.warn("Firebase SDK not loaded");
+          loadHistory();
+          return;
+        }
+
+        if (!firebase.apps.length) {
+          firebase.initializeApp(config);
+        }
+
+        firebase.auth().onAuthStateChanged(async (user) => {
+          currentFirebaseUser = user;
+          if (!user) {
+            try {
+              const cred = await firebase.auth().signInAnonymously();
+              currentFirebaseUser = cred.user;
+            } catch (anonErr) {
+              console.warn("Firebase Anonymous sign-in failed:", anonErr);
+            }
+          }
+          updateAuthUI(currentFirebaseUser);
+          loadHistory();
+        });
+      } catch (err) {
+        console.error("Firebase Auth initialization error:", err);
+        loadHistory();
+      }
+    }
+
+    function openAuthModal() {
+      showPage("account");
+      toggleSidebar(false);
+    }
+
+    function closeAuthModal() {
+      const modal = document.getElementById("authModalBackdrop");
+      if (modal) modal.classList.remove("open");
+    }
+
+    // Google Sign-In & Linking
+    async function handleGoogleAuth() {
+      hideAuthAlerts();
+      if (!window.firebase || !firebase.apps.length) {
+        showAuthError("Firebase is not initialized. Please verify client configuration.");
+        return;
+      }
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+
+      try {
+        if (currentFirebaseUser && currentFirebaseUser.isAnonymous) {
+          // Attempt to link the current anonymous session to preserve guest history
+          try {
+            const linkRes = await currentFirebaseUser.linkWithPopup(provider);
+            currentFirebaseUser = linkRes.user;
+            showToast("Guest account linked with Google! History preserved.");
+          } catch (linkErr) {
+            if (linkErr.code === "auth/credential-already-in-use" || linkErr.code === "auth/email-already-in-use") {
+              if (confirm("This Google account is already registered. Sign in to your existing Google account?")) {
+                const signInRes = await firebase.auth().signInWithPopup(provider);
+                currentFirebaseUser = signInRes.user;
+                showToast(`Signed in as ${currentFirebaseUser.displayName || currentFirebaseUser.email}`);
+              } else {
+                return;
+              }
+            } else {
+              throw linkErr;
+            }
+          }
+        } else {
+          // Direct Google Sign In
+          const res = await firebase.auth().signInWithPopup(provider);
+          currentFirebaseUser = res.user;
+          showToast(`Signed in as ${currentFirebaseUser.displayName || currentFirebaseUser.email}`);
+        }
+
+        updateAuthUI(currentFirebaseUser);
+        loadHistory();
+        showPage("scan");
+      } catch (err) {
+        console.error("Google Auth error:", err);
+        let msg = err.message || "Failed to sign in with Google.";
+        if (err.code === "auth/popup-closed-by-user") {
+          msg = "Google sign-in popup was closed before completing.";
+        } else if (err.code === "auth/operation-not-allowed" || err.code === "auth/configuration-not-found") {
+          msg = "Google Sign-In is not enabled in Firebase Console. Enable Google provider under Authentication > Sign-in method.";
+        }
+        showAuthError(msg);
+      }
+    }
+
+    // Email / Password Registration & Linking
+    async function handleEmailSignUp(e) {
+      if (e) e.preventDefault();
+      hideAuthAlerts();
+
+      const email = document.getElementById("signUpEmail").value.trim();
+      const password = document.getElementById("signUpPassword").value;
+      const confirmPassword = document.getElementById("signUpConfirmPassword").value;
+
+      if (!email || !password || !confirmPassword) {
+        showAuthError("Please fill in all registration fields.");
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showAuthError("Please enter a valid email address.");
+        return;
+      }
+
+      if (password.length < 6) {
+        showAuthError("Password must be at least 6 characters long.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showAuthError("Passwords do not match. Please re-enter.");
+        return;
+      }
+
+      try {
+        if (currentFirebaseUser && currentFirebaseUser.isAnonymous) {
+          // Link guest account to preserve existing scan history under same UID
+          const cred = firebase.auth.EmailAuthProvider.credential(email, password);
+          const linkRes = await currentFirebaseUser.linkWithCredential(cred);
+          currentFirebaseUser = linkRes.user;
+          showToast("Guest session linked! Your scan history is preserved.");
+        } else {
+          // Standard registration
+          const createRes = await firebase.auth().createUserWithEmailAndPassword(email, password);
+          currentFirebaseUser = createRes.user;
+          showToast(`Account created for ${email}`);
+        }
+
+        updateAuthUI(currentFirebaseUser);
+        loadHistory();
+        showPage("scan");
+      } catch (err) {
+        console.error("Sign up error:", err);
+        let msg = err.message || "Failed to create account.";
+        if (err.code === "auth/email-already-in-use") {
+          msg = "An account with this email address already exists. Please sign in instead.";
+        } else if (err.code === "auth/weak-password") {
+          msg = "Password is too weak. Please use at least 6 characters.";
+        }
+        showAuthError(msg);
+      }
+    }
+
+    // Email / Password Login
+    async function handleEmailSignIn(e) {
+      if (e) e.preventDefault();
+      hideAuthAlerts();
+
+      const email = document.getElementById("signInEmail").value.trim();
+      const password = document.getElementById("signInPassword").value;
+
+      if (!email || !password) {
+        showAuthError("Please enter both email and password.");
+        return;
+      }
+
+      try {
+        const res = await firebase.auth().signInWithEmailAndPassword(email, password);
+        currentFirebaseUser = res.user;
+        showToast(`Welcome back, ${email}`);
+        updateAuthUI(currentFirebaseUser);
+        loadHistory();
+        showPage("scan");
+      } catch (err) {
+        console.error("Sign in error:", err);
+        let msg = "Invalid email or password. Please verify your credentials.";
+        if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+          msg = "Invalid email or password. Please verify your credentials.";
+        } else if (err.code === "auth/too-many-requests") {
+          msg = "Too many failed attempts. Please wait a moment or reset your password.";
+        } else if (err.message) {
+          msg = err.message;
+        }
+        showAuthError(msg);
+      }
+    }
+
+    // Password Reset
+    async function handlePasswordReset(e) {
+      if (e) e.preventDefault();
+      hideAuthAlerts();
+
+      const email = document.getElementById("resetEmail").value.trim();
+      if (!email) {
+        showAuthError("Please enter your registered email address.");
+        return;
+      }
+
+      try {
+        await firebase.auth().sendPasswordResetEmail(email);
+        showAuthSuccess(`A password reset link has been dispatched to ${email}. Check your inbox.`);
+      } catch (err) {
+        console.error("Password reset error:", err);
+        showAuthError(err.message || "Failed to send password reset email.");
+      }
+    }
+
+    // Continue as Guest
+    async function handleContinueAsGuest() {
+      hideAuthAlerts();
+      try {
+        if (!currentFirebaseUser) {
+          if (window.firebase && firebase.apps.length) {
+            const cred = await firebase.auth().signInAnonymously();
+            currentFirebaseUser = cred.user;
+          }
+        }
+        updateAuthUI(currentFirebaseUser);
+        loadHistory();
+        showToast("Continuing as Guest");
+        showPage("scan");
+      } catch (err) {
+        console.error("Guest access error:", err);
+        showToast("Continuing as Guest (offline fallback)");
+        showPage("scan");
+      }
+    }
+
+    // Sign Out & Switch to Fresh Guest Session
+    async function handleSignOutUser() {
+      try {
+        if (window.firebase && firebase.apps.length) {
+          await firebase.auth().signOut();
+          try {
+            const cred = await firebase.auth().signInAnonymously();
+            currentFirebaseUser = cred.user;
+          } catch (anonErr) {
+            currentFirebaseUser = null;
+          }
+        } else {
+          currentFirebaseUser = null;
+        }
+        updateAuthUI(currentFirebaseUser);
+        loadHistory();
+        showToast("Signed out. Switched to clean guest session.");
+        showPage("scan");
+      } catch (err) {
+        alert("Sign out error: " + err.message);
+      }
+    }
+
+    // Modal compatibility helpers
+    async function handleEmailAuth(e) {
+      handleEmailSignIn(e);
+    }
+
+    async function handleRegisterAccount() {
+      handleEmailSignUp();
+    }
+
     // Initialize application
     const editModalEl = document.getElementById("editModalBackdrop");
     if (editModalEl) {
@@ -2702,9 +3697,15 @@ QUICK VERDICT:
         if (e.target === this) closeAddToLogModal();
       });
     }
+    const authModalEl = document.getElementById("authModalBackdrop");
+    if (authModalEl) {
+      authModalEl.addEventListener("click", function(e) {
+        if (e.target === this) closeAuthModal();
+      });
+    }
 
     logDateInput.value = getTodayString();
-    loadHistory();
+    initFirebaseAuth();
     renderDashboard();
     showPage("scan");
   </script>

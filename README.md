@@ -8,9 +8,10 @@
 [![Flask](https://img.shields.io/badge/Flask-3.0%2B-000000?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![Groq Cloud](https://img.shields.io/badge/AI-Groq%20Cloud-F55036?style=flat-square&logo=fastapi&logoColor=white)](https://groq.com/)
 [![Tesseract.js](https://img.shields.io/badge/OCR-Tesseract.js%20v5-5C4EE5?style=flat-square)](https://tesseract.projectnaptha.com/)
-[![Database](https://img.shields.io/badge/Database-SQLite3-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Database](https://img.shields.io/badge/Database-Firebase%20Firestore-FFA611?style=flat-square&logo=firebase&logoColor=white)](https://firebase.google.com/docs/firestore)
+[![Auth](https://img.shields.io/badge/Auth-Firebase%20Auth-FFCA28?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com/docs/auth)
 [![WSGI](https://img.shields.io/badge/Server-Gunicorn-499848?style=flat-square&logo=gunicorn&logoColor=white)](https://gunicorn.org/)
-[![Deploy](https://img.shields.io/badge/Deploy-Render-46E3B7?style=flat-square&logo=render&logoColor=white)](https://render.com/)
+[![Deploy](https://img.shields.io/badge/Deploy-Render%20Free-46E3B7?style=flat-square&logo=render&logoColor=white)](https://render.com/)
 [![License](https://img.shields.io/badge/License-Unspecified-lightgrey?style=flat-square)](#license)
 
 </div>
@@ -25,6 +26,7 @@
 - [Application Workflow](#application-workflow)
 - [Technology Stack](#technology-stack)
 - [Project Directory Structure](#project-directory-structure)
+- [Firebase Setup (Auth & Firestore)](#firebase-setup-auth--firestore)
 - [Prerequisites & Installation](#prerequisites--installation)
   - [Windows Installation](#windows-installation)
   - [macOS & Linux Installation](#macos--linux-installation)
@@ -32,10 +34,10 @@
 - [Running Locally](#running-locally)
 - [API Endpoint Documentation](#api-endpoint-documentation)
 - [Database Schema & Data Persistence](#database-schema--data-persistence)
-- [Production Deployment](#production-deployment)
+- [Production Deployment (Render Free + Firestore)](#production-deployment-render-free--firestore)
   - [Deploying to Render via Blueprint](#deploying-to-render-via-blueprint)
   - [Manual Web Service Setup](#manual-web-service-setup)
-  - [Ephemeral vs. Persistent Storage on Render](#ephemeral-vs-persistent-storage-on-render)
+  - [Free-Tier Architecture & Quotas](#free-tier-architecture--quotas)
 - [Interface & Screenshots](#interface--screenshots)
 - [Security & Privacy Considerations](#security--privacy-considerations)
 - [Current Limitations & Roadmap](#current-limitations--roadmap)
@@ -48,11 +50,11 @@
 
 Modern packaged food labels are often deliberately confusing: marketing claims obscure high sugars, sodium quantities are obfuscated across arbitrary serving sizes, and long lists of industrial additives (preservatives, stabilizers, synthetic colors, artificial sweeteners) remain impenetrable to consumers.
 
-**PACKS** solves this by providing immediate, objective clarity:
+**PACKS** solves this with a **100% free-tier cloud architecture**:
 1. **Privacy-Preserving OCR**: Food label images are processed directly in the user's browser using [Tesseract.js v5](https://tesseract.projectnaptha.com/) Web Workers. Raw images never leave the device.
 2. **Structured Nutrition Breakdown**: The extracted label text is sent to a secured [Flask](https://flask.palletsprojects.com/) API powered by [Groq Cloud](https://groq.com/) LLM inference (`openai/gpt-oss-20b`). The analysis is parsed into a rigorous 7-section breakdown.
-3. **Daily Nutrition Tracking**: Users can log analyzed items or manual food entries to monitor daily calories and macronutrient intake (Protein, Carbs, Fat) against a customizable calorie target.
-4. **Persistent History & Assistant**: Scans are persisted to a local SQLite database for historical review, while an interactive nutrition assistant answers questions grounded in the active scan context.
+3. **Daily Nutrition Tracking**: Users can log analyzed items or manual food entries to monitor daily calories and macronutrient intake (Protein, Carbs, Fat) against a customizable calorie target via browser `localStorage`.
+4. **Multi-Tenant Cloud History (Firebase Auth & Firestore)**: Scans are isolated per user under `users/{uid}/scans` in Google Cloud Firestore. Automatic Anonymous authentication gives users an instant private workspace without registration, while optional Email/Password authentication enables permanent account linking and cross-device synchronization. Unauthenticated scans run in guest privacy mode without entering cloud storage.
 
 ---
 
@@ -107,11 +109,14 @@ PACKS strictly enforces structured AI evaluation to eliminate hallucinations:
 </details>
 
 <details>
-<summary><strong>6. Persistent Scan History (SQLite)</strong></summary>
+<summary><strong>6. User-Isolated Cloud History (Firebase Auth & Firestore)</strong></summary>
 
-- **Automatic Persistence**: Every completed analysis is safely stored in a local SQLite database (`scans` table).
-- **Quick Reopen**: Instant retrieval of full OCR transcripts and structured reports from the sidebar.
-- **Individual Record Deletion**: Delete past scans with confirmation prompts and instant UI synchronization.
+- **Firebase Anonymous Authentication**: New visitors instantly receive a private cryptographic session and isolated Firestore workspace without signup barriers.
+- **Optional Email/Password & Account Linking**: Link anonymous guest sessions to permanent email credentials to preserve history across devices and browsers.
+- **Subcollection Data Isolation**: Scans are stored strictly in `users/{uid}/scans/{scan_id}`. Flask verifies Firebase ID tokens (`auth.verify_id_token`) on every history request, preventing cross-tenant access.
+- **Unauthenticated Privacy Mode**: Unauthenticated scans execute AI analysis smoothly and return `id: null` without writing data to the cloud database.
+- **Server-Side Firebase Admin**: Service account credentials never reach the browser; the client only receives safe public client configuration via `/api/firebase-config`.
+- **Persistent Across Restarts**: Overcomes Render Free container restarts; scan history remains permanently stored in Firestore on the free Spark plan.
 </details>
 
 <details>
@@ -132,14 +137,17 @@ flowchart TD
         Upload["File Dropzone / Camera"]
         OCR["Tesseract.js v5 Worker"]
         Editor["Editable Text Field"]
+        AuthClient["Firebase Auth Client (Anon / Email)"]
         UI_Report["7-Section Report View"]
         UI_Dash["Nutrition Dashboard"]
         UI_Log["Daily Log (localStorage)"]
         UI_Chat["AI Assistant Chat"]
     end
 
-    subgraph Backend["Flask 3.0 Backend (app.py)"]
+    subgraph Backend["Flask 3.0 on Render Free (app.py)"]
         SecHeaders["Security Headers (CSP, FrameGuard, NoSniff)"]
+        TokenVerifier["auth.verify_id_token()"]
+        ConfigRoute["GET /api/firebase-config"]
         AnalyzeRoute["POST /api/analyze"]
         HistoryRoute["GET/DELETE /api/history"]
         HealthRoute["GET /api/health"]
@@ -149,35 +157,40 @@ flowchart TD
         GroqLLM["openai/gpt-oss-20b Inference"]
     end
 
-    subgraph Storage["Persistence"]
-        SQLite[(SQLite3 database.db)]
+    subgraph FirebaseCloud["Google Cloud / Firebase Spark Plan"]
+        FirebaseAuth["Firebase Authentication"]
+        Firestore["users/{uid}/scans/{scan_id}"]
     end
 
+    AuthClient <-->|Token Exchange & State| FirebaseAuth
+    ConfigRoute -->|Public Client Config| AuthClient
     Upload -->|Local File Buffer| OCR
     OCR -->|Extracted Text| Editor
-    Editor -->|JSON Payload| SecHeaders
-    SecHeaders --> AnalyzeRoute
+    Editor -->|Payload + Bearer Token| SecHeaders
+    SecHeaders --> TokenVerifier
+    TokenVerifier --> AnalyzeRoute
+    TokenVerifier --> HistoryRoute
     AnalyzeRoute -->|Prompt & Label Context| GroqLLM
     GroqLLM -->|Structured 7-Section Text| AnalyzeRoute
-    AnalyzeRoute -->|Insert Record| SQLite
-    AnalyzeRoute -->|JSON Result| UI_Report
+    AnalyzeRoute -->|Save to user subcollection (if authed)| Firestore
+    AnalyzeRoute -->|JSON Result + Doc ID| UI_Report
     UI_Report -->|Add to Daily Log| UI_Log
     UI_Log -->|Aggregate Metrics| UI_Dash
     UI_Chat -->|Contextual Question| AnalyzeRoute
-    HistoryRoute <-->|Query / Delete| SQLite
-    HealthRoute -->|SELECT 1 Test| SQLite
+    HistoryRoute <-->|Isolated Query / Delete| Firestore
+    HealthRoute -->|Probe Limit 1 Query| Firestore
 ```
 
 ---
 
 ## Application Workflow
 
-1. **Upload & Extract**: Select or drag-and-drop a packaged food label image (`PNG`, `JPG`, `WEBP`). Tesseract.js recognizes label text in the browser.
+1. **Upload & Extract**: Select or drag-and-drop a packaged food label image (`PNG`, `JPG`, `WEBP`). Tesseract.js recognizes label text directly in the browser.
 2. **Review OCR**: The extracted text appears in an editable workspace. Correct any scanning artifacts or unreadable words.
 3. **Analyze**: Click **Analyse**. The Flask API routes the text to Groq Cloud with a conservative, hallucination-resistant nutrition prompt.
 4. **Structured Report**: PACKS parses the AI output into the 7 standard report sections: Product, Nutrition, Ingredients, Additives, Good Points, Things to Watch, and Quick Verdict.
 5. **Track Diet**: Click **+ Add to Daily Log** to import the product's macros into your daily diary and monitor progress toward your calorie target.
-6. **Chat with AI**: Switch to the **AI Assistant** to ask follow-up questions (e.g. *"Is this keto-friendly?"* or *"What does additive E211 do?"*).
+6. **Chat with AI**: Switch to the **AI Assistant** to ask follow-up questions (e.g. *"Is this gluten-free?"* or *"What is additive E330?"*).
 7. **History**: Re-open or delete historical analyses at any time from the sidebar.
 
 ---
@@ -190,10 +203,12 @@ flowchart TD
 | **WSGI Server** | Gunicorn | [gunicorn.org](https://gunicorn.org/) | Multi-worker production HTTP server |
 | **AI Inference** | Groq Cloud SDK | [console.groq.com/docs](https://console.groq.com/docs) | Fast LLM inference with structured nutrition prompts |
 | **Client-Side OCR** | Tesseract.js v5 | [tesseract.projectnaptha.com](https://tesseract.projectnaptha.com/) | In-browser optical character recognition via WebAssembly |
-| **Relational Database** | SQLite3 | [sqlite.org](https://www.sqlite.org/) | Server-side scan history persistence |
+| **Authentication** | Firebase Authentication | [firebase.google.com/docs/auth](https://firebase.google.com/docs/auth) | Anonymous guest login, email/password linking, ID token generation |
+| **Cloud Database** | Firebase Cloud Firestore | [firebase.google.com/docs/firestore](https://firebase.google.com/docs/firestore) | Serverless NoSQL user-isolated scan history (`users/{uid}/scans`) |
+| **Firebase Admin** | firebase-admin Python SDK | [firebase.google.com/docs/admin/setup](https://firebase.google.com/docs/admin/setup) | Server-side ID token verification and Firestore execution |
 | **Configuration** | python-dotenv | [pypi.org/project/python-dotenv](https://pypi.org/project/python-dotenv/) | Environment variable management |
 | **Frontend Runtime** | Vanilla HTML5 / CSS3 / ES6 | [developer.mozilla.org](https://developer.mozilla.org/) | Zero-framework responsive monochrome interface |
-| **Cloud Deployment** | Render | [render.com/docs](https://render.com/docs) | Automated Blueprint deployment (`render.yaml`) |
+| **Cloud Deployment** | Render Free | [render.com/docs](https://render.com/docs) | Free-tier Web Service hosting with automated GitHub builds |
 
 ---
 
@@ -204,18 +219,66 @@ PACKS-sidebar-pages-update/
 │
 ├── .env.example              # Template for local environment variables
 ├── .gitignore                # Excludes .env, *.db, uploads, and runtime caches
-├── app.py                    # Flask application, REST routes, and Groq client
-├── render.yaml               # Render Blueprint deployment configuration
-├── requirements.txt          # Production Python dependencies
+├── app.py                    # Flask application, REST routes, Groq, and Firestore
+├── render.yaml               # Render Blueprint free deployment configuration
+├── requirements.txt          # Production Python dependencies (includes firebase-admin)
 ├── README.md                 # Project documentation
 │
 ├── templates/
 │   └── index.html            # Complete monochrome SPA (HTML, CSS, JS)
 │
 └── [Runtime Files - Excluded from Git]
-    ├── .env                  # Local secret configuration (ignored)
-    └── database.db           # SQLite database file (ignored)
+    └── .env                  # Local secret configuration (ignored)
 ```
+
+---
+
+## Firebase Setup (Auth & Firestore)
+
+PACKS uses **Firebase Authentication** and **Google Cloud Firestore** on the free **Firebase Spark Plan** (no credit card required). Follow these steps to configure your project:
+
+1. **Create a Firebase Project**:
+   - Go to the [Firebase Console](https://console.firebase.google.com/).
+   - Click **Add Project** and name it (e.g. `packs-food-analyzer`).
+   - Disable Google Analytics (optional) and create the project.
+
+2. **Create Cloud Firestore Database**:
+   - In the left sidebar, navigate to **Build** > **Firestore Database**.
+   - Click **Create Database**.
+   - Choose a location (e.g. `nam5 (us-central)`).
+   - Select **Production Mode** (Flask's server-side Firebase Admin SDK has direct access while clients cannot read or tamper with other users' data directly).
+
+3. **Enable Firebase Authentication Providers**:
+   - In the left sidebar, navigate to **Build** > **Authentication**.
+   - Click **Get Started** if initializing authentication for the first time.
+   - Under the **Sign-in method** tab, enable the required providers:
+     - **Google**: Click **Google**, toggle **Enable**, choose your Project support email, and click **Save**.
+     - **Email/Password**: Click **Email/Password**, toggle **Enable**, and click **Save**. (Powers account creation, password login, and password reset recovery).
+     - **Anonymous**: Click **Anonymous**, toggle **Enable**, and click **Save**. (Powers instant private guest sessions with isolated UIDs).
+   - Under the **Settings** tab > **Authorized domains**, ensure your domains are listed:
+     - `localhost` and `127.0.0.1` (automatically authorized for local testing).
+     - Your Render production domain (e.g., `packs-food-analyzer.onrender.com`).
+
+4. **Register Web App (Frontend Configuration)**:
+   - In **Project Settings** (gear icon) > **General**, scroll to the **Your apps** section.
+   - Click the Web icon (`</>`) to add a web app (e.g., `packs-web`).
+   - Copy the configuration values into your `.env`:
+     ```env
+     FIREBASE_CLIENT_API_KEY=AIzaSy...
+     FIREBASE_CLIENT_AUTH_DOMAIN=packs-food-analyzer.firebaseapp.com
+     FIREBASE_CLIENT_PROJECT_ID=packs-food-analyzer
+     FIREBASE_CLIENT_APP_ID=1:123456789:web:abcdef
+     ```
+
+5. **Generate Admin Service Account Key (Backend Configuration)**:
+   - In **Project Settings**, switch to the **Service accounts** tab.
+   - Click **Generate new private key** and confirm.
+   - Open the downloaded JSON file in a text editor and copy the contents.
+   - In your `.env` (or Render Environment Variables), set:
+     ```env
+     FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"...","private_key":"..."}
+     ```
+   - Alternatively, provide the local file path on your development machine.
 
 ---
 
@@ -224,6 +287,7 @@ PACKS-sidebar-pages-update/
 ### Prerequisites
 - **Python 3.10+** (Python 3.11 recommended)
 - **A Groq API Key**: Obtain a free key from the [Groq Console](https://console.groq.com/).
+- **A Firebase Service Account Key**: Follow [Firebase Firestore Setup](#firebase-firestore-setup) above.
 
 ---
 
@@ -252,7 +316,7 @@ PACKS-sidebar-pages-update/
    ```powershell
    Copy-Item .env.example .env
    ```
-   Open `.env` in your text editor and supply your `GROQ_API_KEY`.
+   Open `.env` in your text editor and supply your `GROQ_API_KEY` and `FIREBASE_SERVICE_ACCOUNT_JSON`.
 
 ---
 
@@ -280,7 +344,7 @@ PACKS-sidebar-pages-update/
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` to include your valid `GROQ_API_KEY`.
+   Edit `.env` to include your valid `GROQ_API_KEY` and `FIREBASE_SERVICE_ACCOUNT_JSON`.
 
 ---
 
@@ -294,8 +358,14 @@ GROQ_API_KEY=replace_with_your_groq_api_key
 GROQ_MODEL=openai/gpt-oss-20b
 GROQ_TIMEOUT_SECONDS=30.0
 
-# Database Configuration (Relative or absolute path to SQLite file)
-DATABASE_PATH=database.db
+# Firebase Cloud Firestore (Admin SDK credentials as single-line JSON or local path)
+FIREBASE_SERVICE_ACCOUNT_JSON=replace_with_your_firebase_service_account_json
+
+# Firebase Web Client Configuration (Public configuration for Firebase Authentication & User Isolation)
+FIREBASE_CLIENT_API_KEY=replace_with_your_firebase_client_api_key
+FIREBASE_CLIENT_AUTH_DOMAIN=replace_with_your_project_id.firebaseapp.com
+FIREBASE_CLIENT_PROJECT_ID=replace_with_your_firebase_project_id
+FIREBASE_CLIENT_APP_ID=replace_with_your_firebase_client_app_id
 
 # Server Configuration
 FLASK_DEBUG=0
@@ -305,14 +375,18 @@ PORT=5000
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
 | `GROQ_API_KEY` | **Yes** | *None* | Authentication key for Groq Cloud LLM inference. |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | **Yes** | *None* | Service Account JSON string or file path for server-side Firebase Admin. |
+| `FIREBASE_CLIENT_API_KEY` | No | *None* | Firebase Web API key exposed safely via `/api/firebase-config`. |
+| `FIREBASE_CLIENT_AUTH_DOMAIN` | No | *None* | Firebase Auth Domain (e.g., `<project>.firebaseapp.com`). |
+| `FIREBASE_CLIENT_PROJECT_ID` | No | *None* | Firebase project identifier. |
+| `FIREBASE_CLIENT_APP_ID` | No | *None* | Firebase Web Application ID. |
 | `GROQ_MODEL` | No | `openai/gpt-oss-20b` | Target Groq model identifier. |
 | `GROQ_TIMEOUT_SECONDS` | No | `30.0` | Upstream API timeout before failing gracefully. |
-| `DATABASE_PATH` | No | `database.db` | Relative or absolute path to SQLite database. |
 | `FLASK_DEBUG` | No | `0` | Enable Flask debugger (`1` for dev, `0` for production). |
 | `PORT` | No | `5000` | Port for local server or PaaS binding. |
 
 > [!WARNING]
-> Never commit real API keys or `.env` files to Git. The `.gitignore` file excludes `.env` and all SQLite database files automatically.
+> Never commit real API keys, Firebase service account keys, or `.env` files to Git. The `.gitignore` file excludes `.env` and all sensitive files automatically.
 
 ---
 
@@ -324,7 +398,7 @@ Once configured, start the server:
 python app.py
 ```
 
-The application will bind to `http://127.0.0.1:5000`. Open this URL in any modern web browser (Chrome, Edge, Firefox, Safari).
+The application will bind to `http://127.0.0.1:5000`. Open this URL in any modern web browser.
 
 ---
 
@@ -341,12 +415,33 @@ GET /
 
 ---
 
-### 2. AI Product Analysis
+### 2. Public Firebase Client Configuration
+```http
+GET /api/firebase-config
+```
+- **Description**: Returns safe, public client configuration keys required by the browser to initialize Firebase Authentication. Does not expose private service account keys.
+- **Success Response (`200 OK`)**:
+  ```json
+  {
+    "apiKey": "AIzaSy...",
+    "authDomain": "packs-app.firebaseapp.com",
+    "projectId": "packs-app",
+    "appId": "1:123456789:web:abcdef"
+  }
+  ```
+
+---
+
+### 3. AI Product Analysis
 ```http
 POST /api/analyze
 Content-Type: application/json
+Authorization: Bearer <FIREBASE_ID_TOKEN>   [Optional]
 ```
-- **Description**: Takes label OCR text and optional instructions, queries Groq Cloud, and saves the result to SQLite history.
+- **Description**: Takes label OCR text and optional instructions, queries Groq Cloud, and saves the result to the authenticated user's private Firestore subcollection (`users/{uid}/scans`).
+- **Authentication**:
+  - **Authenticated (Anonymous or Email)**: Scan is evaluated and persisted under `users/{uid}/scans/{scan_id}`. Returns generated string scan `id`.
+  - **Unauthenticated**: Scan is evaluated with full AI intelligence for privacy, returning `id: null` without entering database history.
 - **Request Body**:
   ```json
   {
@@ -363,7 +458,7 @@ Content-Type: application/json
   ```json
   {
     "success": true,
-    "id": 14,
+    "id": "7xK9u8vW2y1Z",
     "product_name": "Almond Crackers",
     "result": "PRODUCT: Almond Crackers\nNUTRITION:\n- Calories: 150 kcal..."
   }
@@ -376,92 +471,106 @@ Content-Type: application/json
 
 ---
 
-### 3. Scan History List
+### 4. Scan History List
 ```http
 GET /api/history
+Authorization: Bearer <FIREBASE_ID_TOKEN>
 ```
-- **Description**: Returns all saved scans in descending order by creation date.
+- **Description**: Returns all saved scans for the verified user (`users/{uid}/scans`) ordered by `created_at` descending.
 - **Success Response (`200 OK`)**:
   ```json
   [
     {
-      "id": 14,
+      "id": "7xK9u8vW2y1Z",
       "product_name": "Almond Crackers",
       "created_at": "2026-10-30T20:15:00"
     }
   ]
   ```
+- **Error Response**:
+  - `401 Unauthorized`: Missing, expired, or invalid Firebase ID token.
 
 ---
 
-### 4. Scan History Detail
+### 5. Scan History Detail
 ```http
-GET /api/history/<int:scan_id>
+GET /api/history/<scan_id>
+Authorization: Bearer <FIREBASE_ID_TOKEN>
 ```
-- **Description**: Retrieves a single historical scan including full OCR transcript and AI analysis.
+- **Description**: Retrieves a single historical scan including full OCR transcript and AI analysis strictly from the verified user's subcollection (`users/{uid}/scans/<scan_id>`). Cross-tenant access is prohibited.
 - **Success Response (`200 OK`)**:
   ```json
   {
-    "id": 14,
+    "id": "7xK9u8vW2y1Z",
     "product_name": "Almond Crackers",
     "ocr_text": "RAW OCR TEXT...",
     "ai_analysis": "STRUCTURED 7-SECTION ANALYSIS...",
     "created_at": "2026-10-30T20:15:00"
   }
   ```
-- **Error Response**: `404 Not Found` if the record does not exist.
+- **Error Responses**:
+  - `401 Unauthorized`: Missing or invalid Firebase ID token.
+  - `404 Not Found`: Scan does not exist or belongs to another user.
+  - `503 Service Unavailable`: Firestore is not configured.
 
 ---
 
-### 5. Delete Scan Record
+### 6. Delete Scan Record
 ```http
-DELETE /api/history/<int:scan_id>
+DELETE /api/history/<scan_id>
+Authorization: Bearer <FIREBASE_ID_TOKEN>
 ```
-- **Description**: Permanently removes a scan from the SQLite database.
+- **Description**: Permanently removes a document strictly from the authenticated user's subcollection (`users/{uid}/scans/<scan_id>`).
 - **Success Response (`200 OK`)**:
   ```json
   {
+    "success": true,
     "message": "Scan record deleted successfully."
   }
   ```
-- **Error Response**: `404 Not Found` if the record does not exist.
+- **Error Responses**:
+  - `401 Unauthorized`: Missing or invalid Firebase ID token.
+  - `404 Not Found`: Scan does not exist or belongs to another user.
+  - `503 Service Unavailable`: Firestore is not configured.
 
 ---
 
-### 6. Health & Status Check
+### 7. Health & Status Check
 ```http
 GET /api/health
 ```
-- **Description**: Monitors database connectivity and Groq configuration readiness.
+- **Description**: Monitors Firestore database connectivity and Groq configuration readiness without exposing credentials.
 - **Success Response (`200 OK`)**:
   ```json
   {
     "status": "ok",
-    "database": "SQLite",
+    "database": "Firestore",
     "database_status": "connected",
     "ocr": "Tesseract.js",
     "ai": "Groq",
-    "groq_configured": true
+    "groq_configured": true,
+    "firestore_configured": true
   }
   ```
-- **Degraded Response (`503 Service Unavailable`)**: Returned if the SQLite database connection check fails.
+- **Degraded Response (`503 Service Unavailable`)**: Returned if `FIREBASE_SERVICE_ACCOUNT_JSON` is configured but Firestore connection fails.
 
 ---
 
 ## Database Schema & Data Persistence
 
-### Server-Side Persistence: SQLite (`database.db`)
+### Server-Side Persistence: User-Isolated Cloud Firestore (`users/{uid}/scans`)
 
-Historical scans are stored locally in SQLite using parameterized queries:
+Scans are strictly segmented by verified Firebase User ID (`uid`):
 
-```sql
-CREATE TABLE IF NOT EXISTS scans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_name TEXT,
-    ocr_text TEXT NOT NULL,
-    ai_analysis TEXT,
-    created_at TEXT NOT NULL
-);
+```text
+Collection: users/
+  └── Document: {uid}
+        └── Subcollection: scans/
+              └── Document: {auto-generated-scan-id}
+                    ├── product_name: string (e.g. "Organic Almond Milk")
+                    ├── ocr_text: string (raw extracted label text)
+                    ├── ai_analysis: string (structured 7-section breakdown)
+                    └── created_at: string (ISO 8601 timestamp)
 ```
 
 ### Client-Side Persistence: Browser `localStorage`
@@ -488,46 +597,58 @@ User-specific dietary tracking data is kept on the client device:
 
 ---
 
-## Production Deployment
+## Production Deployment (Render Free + Firestore)
+
+PACKS is pre-configured for a **100% free-tier production stack** using [Render Free Web Services](https://render.com/) and [Firebase Cloud Firestore](https://firebase.google.com/):
 
 ### Deploying to Render via Blueprint
-
-PACKS includes a configured [`render.yaml`](file:///render.yaml) file:
 
 1. Push your repository to GitHub.
 2. Log in to the [Render Dashboard](https://dashboard.render.com/).
 3. Click **New** > **Blueprint** and select your repository.
-4. Render will parse `render.yaml` automatically:
+4. Render will parse [`render.yaml`](file:///render.yaml) automatically:
    - Sets runtime to **Python**.
    - Executes build: `pip install -r requirements.txt`.
    - Starts production WSGI: `gunicorn --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT app:app`.
    - Binds health check to `/api/health`.
-5. Enter your `GROQ_API_KEY` under the Environment Variables prompt.
+5. Under Environment Variables, supply:
+   - `GROQ_API_KEY`: *(Your Groq API Key)*
+   - `FIREBASE_SERVICE_ACCOUNT_JSON`: *(Your single-line Firebase Service Account JSON)*
+   - `FIREBASE_CLIENT_API_KEY`: *(Your public Web API key)*
+   - `FIREBASE_CLIENT_AUTH_DOMAIN`: *(e.g. `your-project.firebaseapp.com`)*
+   - `FIREBASE_CLIENT_PROJECT_ID`: *(Your Firebase project ID)*
+   - `FIREBASE_CLIENT_APP_ID`: *(Your Firebase web app ID)*
 6. Click **Apply**.
 
 ---
 
 ### Manual Web Service Setup
 
-If deploying without Blueprints:
+If deploying manually without Blueprints:
+- **Environment**: `Python`
 - **Build Command**: `pip install -r requirements.txt`
 - **Start Command**: `gunicorn --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT app:app`
 - **Health Check Path**: `/api/health`
 - **Environment Variables**:
-  - `GROQ_API_KEY`: *(Your secret API Key)*
-  - `GROQ_MODEL`: `openai/gpt-oss-20b`
-  - `FLASK_DEBUG`: `0`
-  - `DATABASE_PATH`: `database.db`
+   - `GROQ_API_KEY`: *(Your secret API Key)*
+   - `FIREBASE_SERVICE_ACCOUNT_JSON`: *(Your secret service account JSON)*
+   - `FIREBASE_CLIENT_API_KEY`: *(Your public Web API key)*
+   - `FIREBASE_CLIENT_AUTH_DOMAIN`: *(e.g. `your-project.firebaseapp.com`)*
+   - `FIREBASE_CLIENT_PROJECT_ID`: *(Your Firebase project ID)*
+   - `FIREBASE_CLIENT_APP_ID`: *(Your Firebase web app ID)*
+   - `GROQ_MODEL`: `openai/gpt-oss-20b`
+   - `FLASK_DEBUG`: `0`
 
 ---
 
-### Ephemeral vs. Persistent Storage on Render
+### Free-Tier Architecture & Quotas
 
-- **Render Free Tier**: Web services run on ephemeral disks. If your instance restarts or redeploys, the local SQLite database resets. However, all **Daily Logs** and **Calorie Goals** remain safe because they reside in the user's browser `localStorage`.
-- **Render Starter Tier (Persistent Disk)**: For permanent server-side SQLite scan history:
-  1. Add a Render **Persistent Disk** mounted at `/data` (1GB).
-  2. Set environment variable: `DATABASE_PATH=/data/database.db`.
-  3. The backend automatically creates `/data/` and initializes `database.db` on boot.
+| Service | Free Tier Allowance | How PACKS Utilizes It |
+| :--- | :--- | :--- |
+| **Render Web Service** | 750 free instance hours / month | Hosts the Gunicorn/Flask web server. Spins down after 15 min of inactivity (spins back up in ~50s upon new requests). |
+| **Firebase Cloud Firestore** | 1 GiB storage, 50k reads/day, 20k writes/day, 20k deletes/day | Permanently preserves scan history across Render container restarts with zero persistent disk costs. |
+| **Groq Cloud API** | Generous free tier requests / tokens | Performs near-instant LLM nutritional analysis using `openai/gpt-oss-20b`. |
+| **Client Tesseract.js** | Unlimited (runs on client hardware) | Performs fast optical character recognition inside the user's browser via WebAssembly Web Workers. |
 
 ---
 
@@ -548,13 +669,13 @@ If deploying without Blueprints:
 ## Security & Privacy Considerations
 
 1. **Client-Side Image Privacy**: Raw food label images are parsed inside browser WebAssembly memory via Tesseract.js. No images are sent to or stored on backend servers.
-2. **Content-Security-Policy (CSP)**: `app.py` enforces a strict CSP restricting executable scripts to self and verified CDNs (`cdn.jsdelivr.net`, `tessdata.projectnaptha.com`).
-3. **MIME & Frame Guarding**: `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN` prevent MIME confusion and clickjacking.
-4. **Input Sanitization & Limits**:
+2. **Server-Side Firebase Security**: Service account credentials (`FIREBASE_SERVICE_ACCOUNT_JSON`) remain strictly server-side inside Flask environment variables and are never transmitted to the browser.
+3. **Content-Security-Policy (CSP)**: `app.py` enforces a strict CSP restricting executable scripts to self and verified CDNs (`cdn.jsdelivr.net`, `tessdata.projectnaptha.com`).
+4. **MIME & Frame Guarding**: `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN` prevent MIME confusion and clickjacking.
+5. **Input Sanitization & Limits**:
    - 2MB request body ceiling prevents memory exhaustion attacks.
    - Text inputs are sanitized to strip null bytes and enforce character limits.
-5. **SQL Injection Defense**: All database operations use SQLite parameterized query bindings (`?`).
-6. **Zero Credential Exposure**: The health check endpoint (`/api/health`) exposes only boolean configuration status, never revealing keys or environment values.
+6. **Zero Credential Exposure**: The health check endpoint (`/api/health`) exposes only boolean configuration status, never revealing keys or service account credentials.
 
 ---
 
@@ -563,7 +684,7 @@ If deploying without Blueprints:
 ### Current Limitations
 - **OCR Accuracy**: OCR performance depends on image sharpness, lighting, and packaging curvature.
 - **Language Support**: Default client-side OCR is currently configured for English (`eng`).
-- **Single-Tenant Database**: SQLite scan history is shared globally across the local deployment; individual client privacy is maintained through browser-side `localStorage` for dietary logs.
+- **Render Cold Starts**: On Render Free tier, instances sleep after 15 minutes of inactivity; the first request after idling takes ~50 seconds to spin up.
 
 ### Planned Roadmap
 - [ ] Multi-language OCR support (French, Spanish, German, Hindi).

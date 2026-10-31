@@ -6,6 +6,13 @@
 **/.env.*
 !**/.env.example
 
+# Firebase & Cloud Service Account Keys
+*firebase-adminsdk*.json
+*-service-account*.json
+service-account*.json
+*.pem
+*.key
+
 # Databases
 database.db
 *.db
